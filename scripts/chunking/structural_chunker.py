@@ -147,7 +147,7 @@ def chunk_books_in_dir(mmd_dir: Path) -> List[Chunk]:
 
 if __name__ == "__main__":
     # Simple manual smoke test.
-    base = Path(__file__).resolve().parents[2]
+    base = Path(__file__).resolve().parents[1]
     cleaned_dir = base / "books" / "mmd_clean"
     raw_dir = base / "books" / "mmd"
 
