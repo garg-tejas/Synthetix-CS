@@ -243,7 +243,7 @@ def main() -> None:
     
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as f:
-        f.write("# Validated questions\n")
+        f.write("// Validated questions\n")
         for q in valid:
             # Remove validation metadata
             q_clean = {k: v for k, v in q.items() if not k.startswith("_")}

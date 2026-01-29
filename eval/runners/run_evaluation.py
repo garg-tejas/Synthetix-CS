@@ -64,8 +64,8 @@ def _print_single_query_results(
             if chunk.chunk_type in (tq.required_chunk_types or []):
                 required_hits += 1
 
-        type_flag = "✓" if is_type_ok else " "
-        noise_flag = "✗NOISE" if has_negative else "     "
+        type_flag = "OK" if is_type_ok else "  "
+        noise_flag = "NOISE" if has_negative else "     "
 
         print(
             f"    {rank:2d}. {score:6.4f}  [{chunk.chunk_type:<12}] "

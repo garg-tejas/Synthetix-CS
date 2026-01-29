@@ -27,7 +27,7 @@ Generate question-answer pairs from textbook chunks using ModelScope API.
 
    ```bash
    export MODELSCOPE_API_TOKEN="your_token_here"
-   export MODELSCOPE_MODEL="zai-org/GLM-4.7-Flash"  # Optional, this is the default
+   export MODELSCOPE_MODEL="deepseek-ai/DeepSeek-R1-0528"  # Optional, this is the default
    ```
 
 That's it! The script will automatically load `.env` if it exists, or use environment variables.
@@ -50,7 +50,7 @@ uv run python -m eval.generation.batch_generate --subject os
 uv run python -m eval.generation.batch_generate --questions-per-chunk 3
 
 # Use specific model
-uv run python -m eval.generation.batch_generate --model "zai-org/GLM-4.7-Flash"
+uv run python -m eval.generation.batch_generate --model "deepseek-ai/DeepSeek-R1-0528"
 ```
 
 Output: `eval/generation/output/generated_questions.jsonl`

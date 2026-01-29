@@ -1,5 +1,5 @@
 """
-LLM client wrapper for ModelScope API inference.
+LLM client wrapper for ModelScope API using OpenAI SDK.
 """
 
 from __future__ import annotations
@@ -7,17 +7,11 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    load_dotenv = None
-
-try:
-    import requests
-except ImportError:
-    requests = None
+import random
+from dotenv import load_dotenv
+from openai import OpenAI
 
 # Load .env file if it exists
 if load_dotenv is not None:
@@ -27,11 +21,12 @@ if load_dotenv is not None:
         load_dotenv(env_file)
 
 
-DEFAULT_MODELSCOPE_MODEL = os.getenv("MODELSCOPE_MODEL", "zai-org/GLM-4.7-Flash")
+DEFAULT_MODELSCOPE_MODEL = os.getenv("MODELSCOPE_MODEL", "deepseek-ai/DeepSeek-R1-0528")
+DEFAULT_BASE_URL = "https://api-inference.modelscope.ai/v1"
 
 
 class ModelScopeClient:
-    """Wrapper around ModelScope API for cloud inference."""
+    """Wrapper around ModelScope API using OpenAI SDK."""
 
     def __init__(
         self,
@@ -39,8 +34,8 @@ class ModelScopeClient:
         api_token: Optional[str] = None,
         base_url: Optional[str] = None,
     ):
-        if requests is None:
-            raise ImportError("requests not installed. Install with: uv pip install requests")
+        if OpenAI is None:
+            raise ImportError("openai not installed. Install with: uv pip install openai")
 
         self.model_name = model_name
         self.api_token = api_token or os.getenv("MODELSCOPE_API_TOKEN")
@@ -50,14 +45,11 @@ class ModelScopeClient:
                 "or get token from https://modelscope.cn/my/myaccesstoken"
             )
 
-        self.base_url = base_url or os.getenv(
-            "MODELSCOPE_API_URL",
-            "https://api.modelscope.cn/v1/chat/completions"
+        self.base_url = base_url or os.getenv("MODELSCOPE_API_URL", DEFAULT_BASE_URL)
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_token,
         )
-        self.headers = {
-            "Authorization": f"Bearer {self.api_token}",
-            "Content-Type": "application/json",
-        }
 
     def generate_single(
         self,
@@ -66,9 +58,10 @@ class ModelScopeClient:
         temperature: float = 0.7,
         top_p: float = 0.9,
         stop: Optional[List[str]] = None,
+        max_retries: int = 3,
     ) -> str:
         """Generate text for a single prompt."""
-        results = self.generate([prompt], max_tokens, temperature, top_p, stop)
+        results = self.generate([prompt], max_tokens, temperature, top_p, stop, max_retries)
         return results[0] if results else ""
 
     def generate(
@@ -78,50 +71,89 @@ class ModelScopeClient:
         temperature: float = 0.7,
         top_p: float = 0.9,
         stop: Optional[List[str]] = None,
+        max_retries: int = 3,
     ) -> List[str]:
-        """Generate text for a batch of prompts."""
+        """Generate text for a batch of prompts with rate limiting."""
         results = []
-        for prompt in prompts:
-            try:
-                messages = [{"role": "user", "content": prompt}]
+        for i, prompt in enumerate(prompts):
+            retry_count = 0
+            while retry_count < max_retries:
+                try:
+                    response = self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
+                        stop=stop,
+                    )
 
-                payload = {
-                    "model": self.model_name,
-                    "messages": messages,
-                    "max_tokens": max_tokens,
-                    "temperature": temperature,
-                    "top_p": top_p,
-                }
+                    if response.choices and len(response.choices) > 0:
+                        generated_text = response.choices[0].message.content or ""
+                        if not generated_text.strip():
+                            print(f"Warning: Empty content in response for prompt {i+1}")
+                        results.append(generated_text.strip())
+                    else:
+                        print(f"Warning: Empty response from ModelScope API for prompt {i+1}")
+                        results.append("")
 
-                if stop:
-                    payload["stop"] = stop
+                    # Rate limiting: delay between requests to avoid concurrency limits
+                    if i < len(prompts) - 1:
+                        delay = 2.0 + random.uniform(0, 1.0)
+                        time.sleep(delay)
+                    
+                    break
 
-                response = requests.post(
-                    self.base_url,
-                    headers=self.headers,
-                    json=payload,
-                    timeout=120,
-                )
-                response.raise_for_status()
-
-                data = response.json()
-                if "choices" in data and len(data["choices"]) > 0:
-                    generated_text = data["choices"][0]["message"]["content"]
-                    results.append(generated_text.strip())
-                else:
-                    print(f"Warning: Unexpected response format: {data}")
-                    results.append("")
-
-                time.sleep(0.5)
-
-            except requests.exceptions.RequestException as e:
-                print(f"Error calling ModelScope API: {e}")
-                if hasattr(e, "response") and e.response is not None:
-                    print(f"Response: {e.response.text}")
-                results.append("")
-                time.sleep(2)
+                except Exception as e:
+                    error_str = str(e)
+                    # Check for rate limit errors
+                    if "429" in error_str or "concurrency" in error_str.lower() or "1302" in error_str:
+                        retry_count += 1
+                        if retry_count >= max_retries:
+                            print(f"Rate limit exceeded after {max_retries} retries. Skipping this prompt.")
+                            results.append("")
+                            # Longer delay before continuing to next prompt
+                            time.sleep(10 + random.uniform(0, 5))
+                            break
+                        # Exponential backoff with jitter for concurrency limits
+                        backoff = (2 ** retry_count) * 3 + random.uniform(0, 3)
+                        print(f"Rate limit hit (429/concurrency). Retrying in {backoff:.1f}s (attempt {retry_count}/{max_retries})...")
+                        time.sleep(backoff)
+                    else:
+                        print(f"Error calling ModelScope API: {e}")
+                        results.append("")
+                        time.sleep(2)
+                        break
 
         return results
+
+    def stream(
+        self,
+        prompt: str,
+        max_tokens: int = 2048,
+        temperature: float = 0.7,
+        top_p: float = 0.9,
+        stop: Optional[List[str]] = None,
+    ) -> Iterator[str]:
+        """Stream text generation for a single prompt."""
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                stop=stop,
+                stream=True,
+            )
+
+            for chunk in response:
+                if chunk.choices and chunk.choices[0].delta.content is not None:
+                    yield chunk.choices[0].delta.content
+
+        except Exception as e:
+            print(f"Error streaming from ModelScope API: {e}")
+            yield ""
 
 
 def create_client(

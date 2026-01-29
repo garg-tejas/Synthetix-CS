@@ -10,7 +10,58 @@ from typing import Dict, List, Optional
 
 from src.llm.client import ModelScopeClient
 from src.rag.index import ChunkRecord
-from .prompts import build_qa_generation_prompt
+from .prompts import build_qa_generation_prompt, build_quality_scoring_prompt
+
+
+def score_question_quality(
+    question: Dict,
+    llm_client: ModelScopeClient,
+    min_score: int = 70,
+) -> tuple[int, bool]:
+    """
+    Score a question's suitability for placement interviews using LLM.
+    
+    Args:
+        question: Question dictionary to score
+        llm_client: Initialized ModelScopeClient
+        min_score: Minimum score threshold (default: 70)
+    
+    Returns:
+        (score, is_acceptable) tuple
+    """
+    prompt = build_quality_scoring_prompt(question)
+    
+    try:
+        response = llm_client.generate_single(
+            prompt,
+            max_tokens=50,
+            temperature=0.3,
+        )
+        
+        if not response or not response.strip():
+            return 0, False
+        
+        # Parse JSON response
+        response_clean = response.strip()
+        json_match = re.search(r'\{[^}]*"score"[^}]*\}', response_clean)
+        if json_match:
+            response_clean = json_match.group(0)
+        
+        try:
+            data = json.loads(response_clean)
+            score = int(data.get("score", 0))
+            return score, score >= min_score
+        except (json.JSONDecodeError, ValueError, KeyError):
+            # If parsing fails, check if score is mentioned in text
+            score_match = re.search(r'score["\s:]*(\d+)', response_clean, re.IGNORECASE)
+            if score_match:
+                score = int(score_match.group(1))
+                return score, score >= min_score
+            return 0, False
+            
+    except Exception as e:
+        # On error, reject the question
+        return 0, False
 
 
 def parse_llm_response(response: str) -> List[Dict]:
@@ -19,30 +70,41 @@ def parse_llm_response(response: str) -> List[Dict]:
     
     Handles various response formats (JSON, markdown code blocks, etc.)
     """
+    if not response or not response.strip():
+        return []
+
+    original_response = response
+    
     # Try to extract JSON from markdown code blocks
     json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.DOTALL)
     if json_match:
         response = json_match.group(1)
 
-    # Try to find JSON object
-    json_match = re.search(r"\{.*\"questions\".*?\}", response, re.DOTALL)
-    if json_match:
-        response = json_match.group(0)
+    # Try to find JSON object with "questions" key
+    if '"questions"' not in response:
+        json_match = re.search(r"\{.*\"questions\".*?\}", original_response, re.DOTALL)
+        if json_match:
+            response = json_match.group(0)
+
+    # Try to find any JSON object
+    if not response.startswith("{"):
+        json_match = re.search(r"\{.*\}", original_response, re.DOTALL)
+        if json_match:
+            response = json_match.group(0)
 
     try:
         data = json.loads(response)
         if "questions" in data:
-            return data["questions"]
+            questions = data["questions"]
+            if isinstance(questions, list) and len(questions) > 0:
+                return questions
         elif isinstance(data, list):
             return data
         else:
             return []
-    except json.JSONDecodeError:
-        # Fallback: try to extract individual questions
-        questions = []
-        # Look for question-answer pairs in the text
-        # This is a simple fallback - may not work well
-        return questions
+    except json.JSONDecodeError as e:
+        # Debug: log parsing failure
+        return []
 
 
 def generate_questions_from_chunk(
@@ -53,6 +115,8 @@ def generate_questions_from_chunk(
     *,
     prev_chunk: Optional[ChunkRecord] = None,
     next_chunk: Optional[ChunkRecord] = None,
+    score_questions: bool = False,
+    min_quality_score: int = 70,
 ) -> List[Dict]:
     """
     Generate questions from a single chunk.
@@ -62,6 +126,8 @@ def generate_questions_from_chunk(
         llm_client: Initialized ModelScopeClient
         num_questions: Number of questions to generate
         max_retries: Number of retries if parsing fails
+        score_questions: Whether to score questions and filter by quality (default: False)
+        min_quality_score: Minimum quality score threshold if scoring is enabled
     
     Returns:
         List of question dictionaries with keys: query, answer, question_type, atomic_facts, difficulty
@@ -82,6 +148,11 @@ def generate_questions_from_chunk(
                 stop=["\n\n\n", "---"],
             )
 
+            if not response or not response.strip():
+                if attempt == max_retries - 1:
+                    print(f"Warning: Empty response from LLM for chunk {chunk.id}")
+                continue
+
             questions = parse_llm_response(response)
 
             if questions:
@@ -90,8 +161,26 @@ def generate_questions_from_chunk(
                     q["source_chunk_id"] = chunk.id
                     q["source_header"] = chunk.header_path
                     q["source_subject"] = _infer_subject(chunk)
-
-                return questions
+                
+                # Score and filter if requested
+                if score_questions:
+                    scored_questions = []
+                    for q in questions:
+                        score, is_acceptable = score_question_quality(q, llm_client, min_score=min_quality_score)
+                        q["quality_score"] = score
+                        
+                        if is_acceptable:
+                            scored_questions.append(q)
+                        else:
+                            print(f"      Filtered question (score {score}): {q.get('query', '')[:50]}...")
+                    return scored_questions
+                else:
+                    return questions
+            else:
+                # Debug: show response snippet if parsing failed
+                if attempt == max_retries - 1:
+                    response_preview = response[:200] if response else "(empty)"
+                    print(f"Warning: Failed to parse questions from chunk {chunk.id}. Response preview: {response_preview}...")
 
         except Exception as e:
             if attempt == max_retries - 1:
@@ -129,6 +218,8 @@ def generate_questions_batch(
     chunks: List[ChunkRecord],
     llm_client: ModelScopeClient,
     questions_per_chunk: int = 2,
+    score_questions: bool = False,
+    min_quality_score: int = 70,
 ) -> List[Dict]:
     """
     Generate questions from multiple chunks in batch.
@@ -137,6 +228,8 @@ def generate_questions_batch(
         chunks: List of chunks to process
         llm_client: Initialized ModelScopeClient
         questions_per_chunk: Number of questions per chunk
+        score_questions: Whether to score questions and filter by quality (default: False)
+        min_quality_score: Minimum quality score threshold if scoring is enabled
     
     Returns:
         Flat list of all generated questions
@@ -147,13 +240,63 @@ def generate_questions_batch(
         prev_chunk = chunks[idx - 1] if idx > 0 else None
         next_chunk = chunks[idx + 1] if idx + 1 < len(chunks) else None
 
+        print(f"    Processing chunk {idx + 1}/{len(chunks)}: {chunk.id[:20]}...")
         questions = generate_questions_from_chunk(
             chunk,
             llm_client,
             num_questions=questions_per_chunk,
             prev_chunk=prev_chunk,
             next_chunk=next_chunk,
+            score_questions=score_questions,
+            min_quality_score=min_quality_score,
         )
+        if questions:
+            print(f"      Generated {len(questions)} questions")
+        else:
+            print(f"      No questions generated")
         all_questions.extend(questions)
 
     return all_questions
+
+
+def score_questions_batch(
+    questions: List[Dict],
+    llm_client: ModelScopeClient,
+    min_quality_score: int = 70,
+    filter_low_scores: bool = True,
+) -> tuple[List[Dict], List[Dict]]:
+    """
+    Score a batch of existing questions and optionally filter by quality.
+    
+    Args:
+        questions: List of question dictionaries to score
+        llm_client: Initialized ModelScopeClient
+        min_quality_score: Minimum quality score threshold
+        filter_low_scores: If True, return only questions above threshold; if False, return all with scores
+    
+    Returns:
+        (accepted_questions, rejected_questions) tuple if filter_low_scores=True
+        (all_questions_with_scores, []) tuple if filter_low_scores=False
+    """
+    accepted = []
+    rejected = []
+    
+    for idx, q in enumerate(questions):
+        if (idx + 1) % 10 == 0:
+            print(f"  Scoring question {idx + 1}/{len(questions)}...")
+        
+        score, is_acceptable = score_question_quality(q, llm_client, min_score=min_quality_score)
+        q["quality_score"] = score
+        
+        if filter_low_scores:
+            if is_acceptable:
+                accepted.append(q)
+            else:
+                rejected.append(q)
+        else:
+            accepted.append(q)
+    
+    if filter_low_scores:
+        return accepted, rejected
+    else:
+        return accepted, []

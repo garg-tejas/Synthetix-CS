@@ -44,12 +44,27 @@ cp .env.example .env
 uv sync
 ```
 
-### 3. Run Retrieval Demo
+### 3. Generate QA Pairs (Evaluation Dataset)
 
 ```bash
-# Using the hybrid searcher
-uv run python -c "from src.rag import HybridSearcher, load_chunks; chunks = load_chunks(); searcher = HybridSearcher.from_chunks(chunks); results = searcher.search('what is a deadlock', top_k=5); print(results[0][0].text[:200])"
+# Test with small subset
+uv run python -m eval.generation.batch_generate --max-chunks 10 --questions-per-chunk 2
+
+# Generate for specific subject
+uv run python -m eval.generation.batch_generate --subject os --max-chunks 50
 ```
+
+### 4. Evaluate Retrieval
+
+```bash
+# Evaluate retrieval quality
+uv run python -m eval.runners.run_question_eval --top-k 5
+
+# Test retrieval behavior
+uv run python -m eval.runners.run_evaluation --subject os
+```
+
+See [docs/QA_GENERATION.md](docs/QA_GENERATION.md) and [docs/EVALUATION.md](docs/EVALUATION.md) for detailed guides.
 
 ## Environment Variables
 
@@ -57,7 +72,7 @@ Create a `.env` file in the project root:
 
 ```bash
 MODELSCOPE_API_TOKEN=your_token_here
-MODELSCOPE_MODEL=zai-org/GLM-4.7-Flash  # Optional
+MODELSCOPE_MODEL=deepseek-ai/DeepSeek-R1-0528  # Optional
 ```
 
 ## Development Status

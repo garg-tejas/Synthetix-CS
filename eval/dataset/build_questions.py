@@ -40,8 +40,8 @@ def save_questions(questions: List[Dict[str, Any]]) -> None:
     QUESTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
     
     with QUESTIONS_PATH.open("w", encoding="utf-8") as f:
-        f.write("# Questions dataset for Phase 1 reasoning model evaluation\n")
-        f.write("# Each line is a JSON object (see schema in comments above)\n\n")
+        f.write("// Questions dataset for Phase 1 reasoning model evaluation\n")
+        f.write("// Each line is a JSON object (see schema in comments above)\n\n")
         for q in questions:
             f.write(json.dumps(q, ensure_ascii=False) + "\n")
 

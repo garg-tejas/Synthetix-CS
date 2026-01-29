@@ -94,9 +94,12 @@ Given this textbook chunk:
 
 Generate {num_questions} high-quality questions that:
 1. Test understanding of the core concepts in this chunk
-2. Are appropriate for technical placement interviews
+2. Are appropriate for technical placement interviews (standalone questions that don't reference "the given text" or "according to the text")
 3. Have clear, concise answers (2-4 sentences)
 4. Are grounded primarily in this focal chunk, using the neighbor context only for clarification
+5. Can be asked naturally in an interview without needing to reference the source material
+
+IMPORTANT: Avoid context-specific phrases like "according to the given text", "based on the text above", "in the provided context", etc. Generate questions as if they are being asked directly in an interview, not as reading comprehension questions.
 
 Focus on generating {suggested_types} that this chunk itself can answer completely.
 
@@ -121,6 +124,45 @@ Return ONLY valid JSON, no markdown formatting, no code blocks:
 }}
 """
 
+    return prompt
+
+
+def build_quality_scoring_prompt(question: dict) -> str:
+    """
+    Build a prompt for scoring a question's suitability for placement interviews.
+    
+    Args:
+        question: Question dictionary with query, answer, question_type, difficulty, etc.
+    
+    Returns:
+        Formatted prompt string for scoring
+    """
+    query = question.get("query", "")
+    answer = question.get("answer", "")
+    question_type = question.get("question_type", "unknown")
+    difficulty = question.get("difficulty", "unknown")
+    
+    prompt = f"""Rate the following question on how suitable it is for a technical placement interview (0-100 scale).
+
+Question: {query}
+Answer: {answer[:300]}...
+Type: {question_type}
+Difficulty: {difficulty}
+
+Scoring criteria (0-100):
+- 90-100: Excellent - Standalone question that tests core concepts, no context references, natural interview question
+- 70-89: Good - Solid question but may have minor issues (slightly vague, or references context)
+- 50-69: Fair - Questionable quality (too context-specific, unclear, or not interview-appropriate)
+- 0-49: Poor - Not suitable (references "given text", "according to text", reading comprehension style, or too vague)
+
+Penalize heavily for:
+- Phrases like "according to the given text", "based on the text", "in the provided context"
+- Questions that require reading comprehension of a specific passage
+- Questions that are too vague or don't test technical understanding
+
+Return ONLY a JSON object with a single "score" field (integer 0-100):
+{{"score": 85}}
+"""
     return prompt
 
 
