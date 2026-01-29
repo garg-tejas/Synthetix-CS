@@ -94,21 +94,21 @@ Given this textbook chunk:
 
 Generate {num_questions} high-quality questions that:
 1. Test understanding of the core concepts in this chunk
-2. Are appropriate for technical placement interviews (standalone questions that don't reference "the given text" or "according to the text")
+2. Are appropriate for technical placement interviews (NOT context-specific like "according to the given text" or "as used in describing X")
 3. Have clear, concise answers (2-4 sentences)
-4. Are grounded primarily in this focal chunk, using the neighbor context only for clarification
-5. Can be asked naturally in an interview without needing to reference the source material
+4. Are standalone questions that could be asked in a real interview without referencing the textbook
 
-IMPORTANT: Avoid context-specific phrases like "according to the given text", "based on the text above", "in the provided context", etc. Generate questions as if they are being asked directly in an interview, not as reading comprehension questions.
+IMPORTANT: Avoid questions that reference the text itself (e.g., "according to the given text", "as used in describing", "define the term as used in"). Generate questions that test conceptual understanding, not text comprehension.
 
 Focus on generating {suggested_types} that this chunk itself can answer completely.
 
 For each question, provide:
-- query: The question text (natural language, as a student would ask)
+- query: The question text (natural language, as a student would ask in an interview)
 - answer: A complete answer (2-4 sentences) that accurately explains the concept
 - question_type: One of [definition, procedural, comparative, factual]
 - atomic_facts: List of 2-4 key facts that the answer should cover
 - difficulty: One of [easy, medium, hard] based on interview difficulty
+- placement_interview_score: An integer from 0-100 rating how likely this question is to be asked in a real technical placement interview. Score 0-30 for questions that are too context-specific, theoretical without practical value, or too obscure. Score 70-100 for questions that are commonly asked, test practical knowledge, and are relevant to real-world scenarios.
 
 Return ONLY valid JSON, no markdown formatting, no code blocks:
 {{
@@ -118,51 +118,13 @@ Return ONLY valid JSON, no markdown formatting, no code blocks:
       "answer": "...",
       "question_type": "...",
       "atomic_facts": ["...", "..."],
-      "difficulty": "..."
+      "difficulty": "...",
+      "placement_interview_score": 85
     }}
   ]
 }}
 """
 
-    return prompt
-
-
-def build_quality_scoring_prompt(question: dict) -> str:
-    """
-    Build a prompt for scoring a question's suitability for placement interviews.
-    
-    Args:
-        question: Question dictionary with query, answer, question_type, difficulty, etc.
-    
-    Returns:
-        Formatted prompt string for scoring
-    """
-    query = question.get("query", "")
-    answer = question.get("answer", "")
-    question_type = question.get("question_type", "unknown")
-    difficulty = question.get("difficulty", "unknown")
-    
-    prompt = f"""Rate the following question on how suitable it is for a technical placement interview (0-100 scale).
-
-Question: {query}
-Answer: {answer[:300]}...
-Type: {question_type}
-Difficulty: {difficulty}
-
-Scoring criteria (0-100):
-- 90-100: Excellent - Standalone question that tests core concepts, no context references, natural interview question
-- 70-89: Good - Solid question but may have minor issues (slightly vague, or references context)
-- 50-69: Fair - Questionable quality (too context-specific, unclear, or not interview-appropriate)
-- 0-49: Poor - Not suitable (references "given text", "according to text", reading comprehension style, or too vague)
-
-Penalize heavily for:
-- Phrases like "according to the given text", "based on the text", "in the provided context"
-- Questions that require reading comprehension of a specific passage
-- Questions that are too vague or don't test technical understanding
-
-Return ONLY a JSON object with a single "score" field (integer 0-100):
-{{"score": 85}}
-"""
     return prompt
 
 

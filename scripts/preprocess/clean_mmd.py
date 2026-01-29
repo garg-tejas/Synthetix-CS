@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import List
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 RAW_DIR = ROOT / "books" / "mmd"
 OUT_DIR = ROOT / "books" / "mmd_clean"
 

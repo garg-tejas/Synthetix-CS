@@ -54,7 +54,7 @@ def filter_chunks_for_generation(
             continue
 
         if subject:
-            inferred = _infer_subject_simple(chunk)
+            inferred = (chunk.subject or _infer_subject_simple(chunk))
             if inferred != subject:
                 continue
 
@@ -87,7 +87,7 @@ def save_checkpoint(questions: List[dict], checkpoint_path: Path, chunk_id: str)
     existing.extend(questions)
 
     with checkpoint_path.open("w", encoding="utf-8") as f:
-        f.write("// Generated questions checkpoint\n")
+        f.write("# Generated questions checkpoint\n")
         for q in existing:
             f.write(json.dumps(q, ensure_ascii=False) + "\n")
 
@@ -102,7 +102,7 @@ def main() -> None:
         "--model",
         type=str,
         default=None,
-        help="Model name (default: from MODELSCOPE_MODEL env var, or deepseek-ai/DeepSeek-R1-0528)",
+        help="Model name (default: from MODELSCOPE_MODEL env var, or Qwen/Qwen3-Coder-480B-A35B-Instruct)",
     )
     parser.add_argument(
         "--modelscope-token",
@@ -146,29 +146,33 @@ def main() -> None:
         help="Number of chunks to process before saving checkpoint (default: 5 to avoid concurrency limits)",
     )
     parser.add_argument(
-        "--score",
-        action="store_true",
-        default=False,
-        help="Score questions and filter by quality after generation",
+        "--batch-delay",
+        type=float,
+        default=5.0,
+        help="Seconds to wait between batches (default: 5; use e.g. 45 for strict rate limits)",
     )
     parser.add_argument(
-        "--min-quality-score",
+        "--min-score",
         type=int,
         default=70,
-        help="Minimum quality score (0-100) to accept questions when --score is enabled (default: 70)",
+        help="Minimum placement_interview_score (0-100) to keep questions (default: 70)",
+    )
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Start from scratch: delete existing checkpoint if present (no resume)",
     )
 
     args = parser.parse_args()
 
-    # Auto-set subject-specific checkpoint if subject is specified
-    if args.subject and args.checkpoint == OUTPUT_DIR / "generated_questions.jsonl":
-        args.checkpoint = OUTPUT_DIR / f"generated_questions_{args.subject}.jsonl"
+    if args.reset and args.checkpoint.exists():
+        args.checkpoint.unlink()
+        print(f"Reset: removed existing checkpoint {args.checkpoint}")
 
     print("Loading chunks...")
-    all_chunks = load_chunks()
+    all_chunks = load_chunks(subject=args.subject)
 
-    subject_label = f" (subject: {args.subject})" if args.subject else ""
-    print(f"Filtering chunks{subject_label}...")
+    print(f"Filtering chunks...")
     filtered_chunks = filter_chunks_for_generation(
         all_chunks,
         subject=args.subject,
@@ -200,15 +204,7 @@ def main() -> None:
             modelscope_token=args.modelscope_token,
         )
         print(f"Using ModelScope API with model: {llm_client.model_name}")
-        generation_calls = len(filtered_chunks) * args.questions_per_chunk
-        if args.score:
-            scoring_calls = len(filtered_chunks) * args.questions_per_chunk
-            total_calls = generation_calls + scoring_calls
-            print(f"Daily limit: 2000 calls (approx. {total_calls} calls needed: {generation_calls} generation + {scoring_calls} scoring)")
-            print(f"Quality filter: Enabled, minimum score {args.min_quality_score}/100")
-        else:
-            print(f"Daily limit: 2000 calls (approx. {generation_calls} calls needed)")
-            print(f"Quality filter: Disabled (use --score to enable)")
+        print(f"Daily limit: 2000 calls (approx. {len(filtered_chunks) * args.questions_per_chunk} calls needed)")
     except Exception as e:
         print(f"Error initializing ModelScope client: {e}")
         print("\nMake sure openai is installed:")
@@ -233,11 +229,10 @@ def main() -> None:
 
         try:
             batch_questions = generate_questions_batch(
-                batch, 
-                llm_client, 
+                batch,
+                llm_client,
                 questions_per_chunk=args.questions_per_chunk,
-                score_questions=args.score,
-                min_quality_score=args.min_quality_score,
+                min_score=args.min_score,
             )
             all_questions.extend(batch_questions)
             processed += len(batch)
@@ -251,9 +246,9 @@ def main() -> None:
             ):
                 save_checkpoint(batch_questions, args.checkpoint, batch[0].id if batch else "unknown")
             
-            # Delay between batches to avoid concurrency limits
+            # Delay between batches to avoid rate limits
             if i + args.batch_size < len(filtered_chunks):
-                delay = 3.0 + random.uniform(0, 2.0)
+                delay = args.batch_delay
                 print(f"  Waiting {delay:.1f}s before next batch...")
                 time.sleep(delay)
 
@@ -264,8 +259,6 @@ def main() -> None:
 
     print("\n" + "=" * 60)
     print(f"Generation complete!")
-    if args.subject:
-        print(f"  Subject: {args.subject.upper()}")
     print(f"  Processed: {processed}/{len(filtered_chunks)} chunks")
     print(f"  Generated: {len(all_questions)} questions")
     print(f"  Output: {args.checkpoint}")
@@ -274,12 +267,9 @@ def main() -> None:
         print("\nNext steps:")
         print("  1. Review generated questions:")
         print(f"     cat {args.checkpoint}")
-        if not args.score:
-            print("  2. Score questions (optional):")
-            print(f"     uv run python -m eval.generation.score_questions {args.checkpoint}")
-        print(f"  {'3' if args.score else '2'}. Validate and filter:")
+        print("  2. Validate and filter:")
         print("     uv run python -m eval.generation.validate_qa", args.checkpoint)
-        print(f"  {'4' if args.score else '3'}. Import into questions.jsonl:")
+        print("  3. Import into questions.jsonl:")
         print("     uv run python -m eval.dataset.build_questions import-from-llm", args.checkpoint)
 
 

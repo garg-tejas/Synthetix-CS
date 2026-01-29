@@ -30,24 +30,71 @@ class Chunk:
     text: str
 
 
-def _detect_chunk_type(header_text: str, body: str) -> str:
-    """Very simple heuristic for now; can be upgraded later."""
-    header_lower = header_text.lower()
-    body_lower = body.lower()
+# Chunk type strings; excluded set used for QA filtering
+CHUNK_TYPE_REFERENCES = "references"
+CHUNK_TYPE_BIBLIOGRAPHY = "bibliography"
+CHUNK_TYPE_CITATIONS = "citations"
+CHUNK_TYPE_APPENDIX = "appendix"
+CHUNK_TYPE_ALGORITHM = "algorithm"
+CHUNK_TYPE_EXAMPLE = "example"
+CHUNK_TYPE_DEFINITION = "definition"
+CHUNK_TYPE_THEOREM = "theorem"
+CHUNK_TYPE_PROTOCOL = "protocol"
+CHUNK_TYPE_EXERCISE = "exercise"
+CHUNK_TYPE_SECTION = "section"
 
-    if any(k in header_lower for k in ("algorithm", "procedure", "pseudo")):
-        return "algorithm"
-    if any(k in header_lower for k in ("example", "case study", "case-study")):
-        return "example"
-    if "definition" in header_lower or "what is" in header_lower:
-        return "definition"
-    if "theorem" in header_lower or "lemma" in header_lower or "proof" in header_lower:
-        return "theorem"
-    if "protocol" in header_lower or "handshake" in body_lower:
-        return "protocol"
-    if "exercise" in header_lower or "problem" in header_lower:
-        return "exercise"
-    return "section"
+QA_EXCLUDED_CHUNK_TYPES = frozenset({
+    CHUNK_TYPE_EXERCISE, CHUNK_TYPE_REFERENCES, CHUNK_TYPE_BIBLIOGRAPHY,
+    CHUNK_TYPE_CITATIONS, CHUNK_TYPE_APPENDIX,
+})
+QA_EXCLUDED_HEADER_MARKERS = frozenset({
+    "appendix", "exercises", "review questions", "selected bibliography",
+    "references", "bibliography", "citations", "acknowledgment", "index",
+})
+
+# "What is X?" style headers (word boundary to avoid "what is not", etc.)
+_WHAT_IS_RE = re.compile(r"\bwhat\s+is\b", re.IGNORECASE)
+
+
+def _detect_chunk_type(header_text: str, body: str) -> str:
+    """
+    Heuristic chunk type from header and body.
+    Order: back-matter and excluded types first, then content types; first match wins.
+    """
+    h = header_text.lower()
+    b = body.lower()[:800]
+
+    if "references" in h:
+        return CHUNK_TYPE_REFERENCES
+    if "bibliography" in h:
+        return CHUNK_TYPE_BIBLIOGRAPHY
+    if "citations" in h:
+        return CHUNK_TYPE_CITATIONS
+    if "appendix" in h:
+        return CHUNK_TYPE_APPENDIX
+    if "exercise" in h or "problem" in h:
+        return CHUNK_TYPE_EXERCISE
+
+    if any(k in h for k in ("algorithm", "procedure", "pseudo")):
+        return CHUNK_TYPE_ALGORITHM
+    if any(k in h for k in ("example", "case study", "case-study")):
+        return CHUNK_TYPE_EXAMPLE
+    if "definition" in h or _WHAT_IS_RE.search(header_text):
+        return CHUNK_TYPE_DEFINITION
+    if any(k in h for k in ("theorem", "lemma", "proof")):
+        return CHUNK_TYPE_THEOREM
+    if "protocol" in h or "handshake" in b:
+        return CHUNK_TYPE_PROTOCOL
+
+    return CHUNK_TYPE_SECTION
+
+
+def is_qa_excluded(chunk: Chunk) -> bool:
+    """True if chunk should be excluded from QA generation (references, exercises, appendix, etc.)."""
+    if chunk.chunk_type in QA_EXCLUDED_CHUNK_TYPES:
+        return True
+    header_lower = chunk.header_path.lower()
+    return any(marker in header_lower for marker in QA_EXCLUDED_HEADER_MARKERS)
 
 
 def _iter_lines(path: Path) -> Iterable[str]:

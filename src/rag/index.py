@@ -7,7 +7,7 @@ from __future__ import annotations
 import dataclasses
 import json
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,10 +25,14 @@ class ChunkRecord:
     key_terms: List[str]
     text: str
     potential_questions: List[str] = dataclasses.field(default_factory=list)
+    subject: str = ""
 
 
-def load_chunks(path: Path | None = None) -> List[ChunkRecord]:
-    """Load chunks from JSONL file."""
+def load_chunks(
+    path: Path | None = None,
+    subject: Optional[str] = None,
+) -> List[ChunkRecord]:
+    """Load chunks from JSONL file. If subject is set, only chunks with that subject are loaded."""
     if path is None:
         path = CHUNKS_PATH
     if not path.exists():
@@ -41,6 +45,8 @@ def load_chunks(path: Path | None = None) -> List[ChunkRecord]:
             if not line:
                 continue
             obj = json.loads(line)
+            if subject and obj.get("subject") and obj.get("subject") != subject:
+                continue
             chunks.append(
                 ChunkRecord(
                     id=obj["id"],
@@ -50,6 +56,7 @@ def load_chunks(path: Path | None = None) -> List[ChunkRecord]:
                     key_terms=list(obj.get("key_terms", [])),
                     text=obj["text"],
                     potential_questions=list(obj.get("potential_questions", [])),
+                    subject=obj.get("subject", ""),
                 )
             )
     return chunks

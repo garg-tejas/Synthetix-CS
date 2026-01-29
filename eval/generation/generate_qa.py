@@ -10,58 +10,7 @@ from typing import Dict, List, Optional
 
 from src.llm.client import ModelScopeClient
 from src.rag.index import ChunkRecord
-from .prompts import build_qa_generation_prompt, build_quality_scoring_prompt
-
-
-def score_question_quality(
-    question: Dict,
-    llm_client: ModelScopeClient,
-    min_score: int = 70,
-) -> tuple[int, bool]:
-    """
-    Score a question's suitability for placement interviews using LLM.
-    
-    Args:
-        question: Question dictionary to score
-        llm_client: Initialized ModelScopeClient
-        min_score: Minimum score threshold (default: 70)
-    
-    Returns:
-        (score, is_acceptable) tuple
-    """
-    prompt = build_quality_scoring_prompt(question)
-    
-    try:
-        response = llm_client.generate_single(
-            prompt,
-            max_tokens=50,
-            temperature=0.3,
-        )
-        
-        if not response or not response.strip():
-            return 0, False
-        
-        # Parse JSON response
-        response_clean = response.strip()
-        json_match = re.search(r'\{[^}]*"score"[^}]*\}', response_clean)
-        if json_match:
-            response_clean = json_match.group(0)
-        
-        try:
-            data = json.loads(response_clean)
-            score = int(data.get("score", 0))
-            return score, score >= min_score
-        except (json.JSONDecodeError, ValueError, KeyError):
-            # If parsing fails, check if score is mentioned in text
-            score_match = re.search(r'score["\s:]*(\d+)', response_clean, re.IGNORECASE)
-            if score_match:
-                score = int(score_match.group(1))
-                return score, score >= min_score
-            return 0, False
-            
-    except Exception as e:
-        # On error, reject the question
-        return 0, False
+from .prompts import build_qa_generation_prompt
 
 
 def parse_llm_response(response: str) -> List[Dict]:
@@ -112,11 +61,10 @@ def generate_questions_from_chunk(
     llm_client: ModelScopeClient,
     num_questions: int = 2,
     max_retries: int = 2,
+    min_score: int = 70,
     *,
     prev_chunk: Optional[ChunkRecord] = None,
     next_chunk: Optional[ChunkRecord] = None,
-    score_questions: bool = False,
-    min_quality_score: int = 70,
 ) -> List[Dict]:
     """
     Generate questions from a single chunk.
@@ -126,8 +74,6 @@ def generate_questions_from_chunk(
         llm_client: Initialized ModelScopeClient
         num_questions: Number of questions to generate
         max_retries: Number of retries if parsing fails
-        score_questions: Whether to score questions and filter by quality (default: False)
-        min_quality_score: Minimum quality score threshold if scoring is enabled
     
     Returns:
         List of question dictionaries with keys: query, answer, question_type, atomic_facts, difficulty
@@ -156,26 +102,23 @@ def generate_questions_from_chunk(
             questions = parse_llm_response(response)
 
             if questions:
-                # Add metadata
+                # Add metadata and filter by placement_interview_score when present
+                kept = []
                 for q in questions:
                     q["source_chunk_id"] = chunk.id
                     q["source_header"] = chunk.header_path
-                    q["source_subject"] = _infer_subject(chunk)
-                
-                # Score and filter if requested
-                if score_questions:
-                    scored_questions = []
-                    for q in questions:
-                        score, is_acceptable = score_question_quality(q, llm_client, min_score=min_quality_score)
-                        q["quality_score"] = score
-                        
-                        if is_acceptable:
-                            scored_questions.append(q)
-                        else:
-                            print(f"      Filtered question (score {score}): {q.get('query', '')[:50]}...")
-                    return scored_questions
-                else:
-                    return questions
+                    q["source_subject"] = chunk.subject or _infer_subject(chunk)
+                    score = q.get("placement_interview_score")
+                    if score is not None:
+                        try:
+                            q["placement_interview_score"] = int(score)
+                        except (TypeError, ValueError):
+                            q["placement_interview_score"] = 100
+                    else:
+                        q["placement_interview_score"] = 100
+                    if q["placement_interview_score"] >= min_score:
+                        kept.append(q)
+                return kept
             else:
                 # Debug: show response snippet if parsing failed
                 if attempt == max_retries - 1:
@@ -191,7 +134,9 @@ def generate_questions_from_chunk(
 
 
 def _infer_subject(chunk: ChunkRecord) -> str:
-    """Infer subject (os/dbms/cn) from chunk metadata."""
+    """Subject from chunk tag or inferred from metadata."""
+    if getattr(chunk, "subject", None) and chunk.subject:
+        return chunk.subject
     header_lower = chunk.header_path.lower()
     text_lower = chunk.text[:500].lower()
 
@@ -218,8 +163,7 @@ def generate_questions_batch(
     chunks: List[ChunkRecord],
     llm_client: ModelScopeClient,
     questions_per_chunk: int = 2,
-    score_questions: bool = False,
-    min_quality_score: int = 70,
+    min_score: int = 70,
 ) -> List[Dict]:
     """
     Generate questions from multiple chunks in batch.
@@ -228,11 +172,10 @@ def generate_questions_batch(
         chunks: List of chunks to process
         llm_client: Initialized ModelScopeClient
         questions_per_chunk: Number of questions per chunk
-        score_questions: Whether to score questions and filter by quality (default: False)
-        min_quality_score: Minimum quality score threshold if scoring is enabled
+        min_score: Minimum placement_interview_score (0-100) to keep; questions below are dropped.
     
     Returns:
-        Flat list of all generated questions
+        Flat list of generated questions (only those with placement_interview_score >= min_score).
     """
     all_questions: List[Dict] = []
 
@@ -245,10 +188,9 @@ def generate_questions_batch(
             chunk,
             llm_client,
             num_questions=questions_per_chunk,
+            min_score=min_score,
             prev_chunk=prev_chunk,
             next_chunk=next_chunk,
-            score_questions=score_questions,
-            min_quality_score=min_quality_score,
         )
         if questions:
             print(f"      Generated {len(questions)} questions")
@@ -266,37 +208,25 @@ def score_questions_batch(
     filter_low_scores: bool = True,
 ) -> tuple[List[Dict], List[Dict]]:
     """
-    Score a batch of existing questions and optionally filter by quality.
-    
-    Args:
-        questions: List of question dictionaries to score
-        llm_client: Initialized ModelScopeClient
-        min_quality_score: Minimum quality score threshold
-        filter_low_scores: If True, return only questions above threshold; if False, return all with scores
-    
-    Returns:
-        (accepted_questions, rejected_questions) tuple if filter_low_scores=True
-        (all_questions_with_scores, []) tuple if filter_low_scores=False
+    Filter questions by placement_interview_score (when present).
+    Does not call the LLM; uses existing placement_interview_score on each question.
+    Returns (accepted, rejected).
     """
-    accepted = []
-    rejected = []
-    
-    for idx, q in enumerate(questions):
-        if (idx + 1) % 10 == 0:
-            print(f"  Scoring question {idx + 1}/{len(questions)}...")
-        
-        score, is_acceptable = score_question_quality(q, llm_client, min_score=min_quality_score)
-        q["quality_score"] = score
-        
-        if filter_low_scores:
-            if is_acceptable:
-                accepted.append(q)
-            else:
-                rejected.append(q)
+    accepted: List[Dict] = []
+    rejected: List[Dict] = []
+    for q in questions:
+        score = q.get("placement_interview_score")
+        if score is None:
+            accepted.append(q)
+            continue
+        try:
+            s = int(score)
+        except (TypeError, ValueError):
+            accepted.append(q)
+            continue
+        q["quality_score"] = s
+        if filter_low_scores and s < min_quality_score:
+            rejected.append(q)
         else:
             accepted.append(q)
-    
-    if filter_low_scores:
-        return accepted, rejected
-    else:
-        return accepted, []
+    return accepted, rejected

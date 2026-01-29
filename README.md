@@ -44,7 +44,22 @@ cp .env.example .env
 uv sync
 ```
 
-### 3. Generate QA Pairs (Evaluation Dataset)
+### 3. Build or Update Chunks (Optional)
+
+If you need to (re)create `data/chunks.jsonl` with subject tags and QA exclusions:
+
+```bash
+# 1. Put raw textbook .mmd files in books/mmd/
+# 2. Clean them (writes books/mmd_clean/)
+uv run python scripts/preprocess/clean_mmd.py
+
+# 3. Build chunks (writes data/chunks.jsonl with subject, excludes references/exercises/appendix)
+uv run python scripts/build_chunks.py
+```
+
+If `books/mmd_clean/` already exists, run only step 3.
+
+### 4. Generate QA Pairs (Evaluation Dataset)
 
 ```bash
 # Test with small subset
@@ -54,7 +69,7 @@ uv run python -m eval.generation.batch_generate --max-chunks 10 --questions-per-
 uv run python -m eval.generation.batch_generate --subject os --max-chunks 50
 ```
 
-### 4. Evaluate Retrieval
+### 5. Evaluate Retrieval
 
 ```bash
 # Evaluate retrieval quality
