@@ -1,12 +1,8 @@
-from __future__ import annotations
-
 """
 Core data loading utilities for RAG over textbook chunks.
-
-This module:
-- Loads `eval/dataset/chunks.jsonl`
-- Provides a simple `ChunkRecord` dataclass
 """
+
+from __future__ import annotations
 
 import dataclasses
 import json
@@ -15,20 +11,24 @@ from typing import Iterable, List
 
 
 ROOT = Path(__file__).resolve().parents[2]
-CHUNKS_PATH = ROOT / "eval" / "dataset" / "chunks.jsonl"
+CHUNKS_PATH = ROOT / "data" / "chunks.jsonl"
 
 
 @dataclasses.dataclass
 class ChunkRecord:
+    """Represents a single chunk from the textbook corpus."""
+
     id: str
     book_id: str
     header_path: str
     chunk_type: str
     key_terms: List[str]
     text: str
+    potential_questions: List[str] = dataclasses.field(default_factory=list)
 
 
 def load_chunks(path: Path | None = None) -> List[ChunkRecord]:
+    """Load chunks from JSONL file."""
     if path is None:
         path = CHUNKS_PATH
     if not path.exists():
@@ -49,22 +49,13 @@ def load_chunks(path: Path | None = None) -> List[ChunkRecord]:
                     chunk_type=obj["chunk_type"],
                     key_terms=list(obj.get("key_terms", [])),
                     text=obj["text"],
+                    potential_questions=list(obj.get("potential_questions", [])),
                 )
             )
     return chunks
 
 
 def iter_chunks(path: Path | None = None) -> Iterable[ChunkRecord]:
+    """Iterate over chunks from JSONL file."""
     for ch in load_chunks(path):
         yield ch
-
-
-if __name__ == "__main__":
-    cs = load_chunks()
-    print(f"Loaded {len(cs)} chunks from {CHUNKS_PATH}")
-    for c in cs[:3]:
-        print("ID:", c.id)
-        print("Header:", c.header_path)
-        print("Type:", c.chunk_type)
-        print()
-

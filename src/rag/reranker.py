@@ -1,11 +1,8 @@
-from __future__ import annotations
-
 """
 Cross-encoder reranker for second-stage re-ranking of retrieved chunks.
-
-Uses sentence-transformers CrossEncoder under the hood so we don't have to
-pull in raw transformers ourselves.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Iterable, List, Tuple
@@ -20,18 +17,13 @@ DEFAULT_RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 @dataclass
 class CrossEncoderReranker:
-    """
-    Lightweight wrapper around a sentence-transformers CrossEncoder.
-
-    Given a query and a list of (chunk, score) pairs, it re-scores them with
-    the cross-encoder and returns a new list sorted by a weighted combination
-    of the original score and the cross-encoder score.
-    """
+    """Cross-encoder reranker for improving retrieval quality."""
 
     model_name: str = DEFAULT_RERANKER_MODEL
     alpha: float = 0.5  # weight for original score vs cross-encoder score
 
     def __post_init__(self) -> None:
+        """Initialize the cross-encoder model."""
         self._model = CrossEncoder(self.model_name)
 
     def rerank(
@@ -39,14 +31,22 @@ class CrossEncoderReranker:
         query: str,
         candidates: Iterable[Tuple[ChunkRecord, float]],
     ) -> List[Tuple[ChunkRecord, float]]:
+        """
+        Re-rank candidates using cross-encoder.
+
+        Args:
+            query: User query
+            candidates: List of (chunk, score) pairs to re-rank
+
+        Returns:
+            Re-ranked list sorted by combined score.
+        """
         pairs: List[Tuple[ChunkRecord, float]] = list(candidates)
         if not pairs:
             return []
 
-        # Build (query, document) pairs for cross-encoder
         texts = []
         for chunk, _orig_score in pairs:
-            # Use header + leading text as the passage text.
             doc_text = f"{chunk.header_path}. {chunk.text[:512].replace('\n', ' ')}"
             texts.append((query, doc_text))
 
@@ -59,4 +59,3 @@ class CrossEncoderReranker:
 
         reranked.sort(key=lambda x: x[1], reverse=True)
         return reranked
-
