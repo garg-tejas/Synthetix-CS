@@ -14,7 +14,5 @@ class RAGConfig:
     use_hyde: bool = True
     use_reranker: bool = True
     use_query_rewriting: bool = True
-    bm25_weight: float = 0.5
-    dense_weight: float = 0.5
     top_k: int = 5
     candidate_k: int = 20

@@ -1,12 +1,57 @@
 [project]
-name = "slm-based"
+name = "slm-rag"
 version = "0.1.0"
-description = "Add your description here"
+description = "End-to-end RAG system with agentic orchestration for technical Q&A"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "huggingface-hub[hf-xet]>=0.36.0",
-    "marker-pdf[full]>=1.10.1",
+    "fastapi>=0.104.0",
+    "openai>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "pytest>=7.4.0",
     "rank-bm25>=0.2.2",
+    "requests>=2.31.0",
     "sentence-transformers>=3.0.0",
+    "uvicorn[standard]>=0.24.0",
 ]
+
+[project.optional-dependencies]
+generation = [
+    "transformers>=4.40.0",
+]
+cpu = [
+  "torch>=2.9.1",
+  "torchvision>=0.24.1",
+]
+cu130 = [
+  "torch>=2.9.1",
+  "torchvision>=0.24.1",
+]
+
+[tool.uv]
+conflicts = [
+  [
+    { extra = "cpu" },
+    { extra = "cu130" },
+  ],
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu130", extra = "cu130" },
+]
+torchvision = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu130", extra = "cu130" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true

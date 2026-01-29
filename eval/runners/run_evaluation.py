@@ -3,9 +3,9 @@ Simple CLI to run the canned test queries against the current retrieval stack.
 
 Usage (from repo root):
 
-    uv run python -m eval.evaluate.run_test_queries
-    uv run python -m eval.evaluate.run_test_queries --query "what is tcp 3 way handshake"
-    uv run python -m eval.evaluate.run_test_queries --subject os
+    uv run python -m eval.runners.run_evaluation
+    uv run python -m eval.runners.run_evaluation --query "what is tcp 3 way handshake"
+    uv run python -m eval.runners.run_evaluation --subject os
 """
 
 from __future__ import annotations
@@ -13,8 +13,7 @@ from __future__ import annotations
 import argparse
 from typing import List
 
-from eval.rag.index import load_chunks
-from eval.rag.search_cli import HybridSearcher
+from src.rag import HybridSearcher, load_chunks
 from .test_queries import TestQuery, get_test_queries, get_queries_by_subject
 
 
@@ -27,12 +26,23 @@ def _print_single_query_results(
     tq: TestQuery,
     top_k: int,
     idx: int | None = None,
+    expand_context: bool = False,
+    context_window: int = 1,
 ) -> None:
     """Run one TestQuery and pretty‑print the top‑k hits."""
     header = _format_result_header(idx or 1, tq.query, tq.description)
     print(header, end="")
 
-    results = searcher.search(tq.query, top_k=top_k)
+    if expand_context:
+        expanded_chunks = searcher.search_with_context(
+            tq.query, top_k=top_k, window=context_window
+        )
+        # Convert to (chunk, score) format for compatibility
+        # Scores are lost in expansion, so we use 0.0 as placeholder
+        results = [(ch, 0.0) for ch in expanded_chunks]
+        print(f"    Retrieved {top_k} chunks, expanded to {len(expanded_chunks)} with neighbors (window={context_window})")
+    else:
+        results = searcher.search_raw(tq.query, top_k=top_k)
 
     if not results:
         print("    (no results)")
@@ -105,12 +115,28 @@ def main(argv: List[str] | None = None) -> None:
         "--query",
         help="Run a single ad‑hoc query string instead of the canned set.",
     )
+    parser.add_argument(
+        "--expand-context",
+        action="store_true",
+        help="Expand retrieved chunks with neighboring chunks from the same book.",
+    )
+    parser.add_argument(
+        "--context-window",
+        type=int,
+        default=1,
+        help="Number of neighboring chunks to include on each side (default: 1)",
+    )
 
     args = parser.parse_args(argv)
 
     chunks = load_chunks()
     # Use full hybrid + reranker stack for evaluation.
-    searcher = HybridSearcher.from_chunks(chunks, use_reranker=True)
+    # Enable context expansion if requested.
+    searcher = HybridSearcher.from_chunks(
+        chunks,
+        use_reranker=True,
+        use_context_expansion=args.expand_context,
+    )
 
     # Ad‑hoc single query mode
     if args.query:
@@ -121,7 +147,14 @@ def main(argv: List[str] | None = None) -> None:
             negative_patterns=[],
             expected_concepts=[],
         )
-        _print_single_query_results(searcher, tq, top_k=args.top_k, idx=1)
+        _print_single_query_results(
+            searcher,
+            tq,
+            top_k=args.top_k,
+            idx=1,
+            expand_context=args.expand_context,
+            context_window=args.context_window,
+        )
         return
 
     # Canned test set mode
@@ -137,7 +170,14 @@ def main(argv: List[str] | None = None) -> None:
     print(f"Running {len(test_queries)} test queries (top_k={args.top_k})...")
 
     for i, tq in enumerate(test_queries, start=1):
-        _print_single_query_results(searcher, tq, top_k=args.top_k, idx=i)
+        _print_single_query_results(
+            searcher,
+            tq,
+            top_k=args.top_k,
+            idx=i,
+            expand_context=args.expand_context,
+            context_window=args.context_window,
+        )
 
 
 if __name__ == "__main__":

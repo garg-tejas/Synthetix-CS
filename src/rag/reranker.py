@@ -20,7 +20,7 @@ class CrossEncoderReranker:
     """Cross-encoder reranker for improving retrieval quality."""
 
     model_name: str = DEFAULT_RERANKER_MODEL
-    alpha: float = 0.5  # weight for original score vs cross-encoder score
+    alpha: float = 0.5
 
     def __post_init__(self) -> None:
         """Initialize the cross-encoder model."""

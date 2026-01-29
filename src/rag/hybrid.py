@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 from .bm25 import BM25Index
+from .config import RAGConfig
 from .context_window import build_book_index, expand_with_neighbors
 from .dense import DenseIndex
 from .hyde import HydeGenerator
@@ -19,6 +20,7 @@ from .query_understanding import (
     chunk_negates_concept,
 )
 from .reranker import CrossEncoderReranker
+from .retriever import RetrievalResult
 from .rrf_merger import rrf_merge
 
 
@@ -32,10 +34,10 @@ class HybridSearcher:
 
     bm25_index: BM25Index
     dense_index: DenseIndex
+    config: RAGConfig
     reranker: CrossEncoderReranker | None = None
     chunks: List[ChunkRecord] | None = None
     query_rewriter: QueryRewriter | None = None
-    use_hyde: bool = False
     hyde_generator: HydeGenerator | None = None
 
     @classmethod
@@ -43,41 +45,57 @@ class HybridSearcher:
         cls,
         chunks: List[ChunkRecord],
         *,
-        use_reranker: bool = False,
+        config: RAGConfig | None = None,
+        use_reranker: bool | None = None,
         use_context_expansion: bool = False,
-        use_hyde: bool = True,
+        use_hyde: bool | None = None,
     ) -> "HybridSearcher":
         """Create a HybridSearcher from chunks."""
+        if config is None:
+            config = RAGConfig()
+        
+        if use_reranker is not None:
+            config.use_reranker = use_reranker
+        if use_hyde is not None:
+            config.use_hyde = use_hyde
+        
         bm25 = BM25Index.from_chunks(chunks)
         dense = DenseIndex.from_chunks(chunks)
-        reranker = CrossEncoderReranker() if use_reranker else None
+        reranker = CrossEncoderReranker() if config.use_reranker else None
         stored_chunks = chunks if use_context_expansion else None
-        rewriter = QueryRewriter()
+        rewriter = QueryRewriter() if config.use_query_rewriting else None
         hyde_gen: HydeGenerator | None = None
-        if use_hyde:
+        if config.use_hyde:
             try:
                 hyde_gen = HydeGenerator.from_env()
             except Exception as e:
                 print(f"[HybridSearcher] HYDE disabled (initialization failed): {e}")
-                use_hyde = False
+                config.use_hyde = False
         return cls(
             bm25_index=bm25,
             dense_index=dense,
+            config=config,
             reranker=reranker,
             chunks=stored_chunks,
             query_rewriter=rewriter,
-            use_hyde=use_hyde,
             hyde_generator=hyde_gen,
         )
 
     def search(
-        self, query: str, top_k: int = 5, *, intent=None
-    ) -> List[Tuple[ChunkRecord, float]]:
-        """Search for top-k chunks matching the query."""
+        self, query: str, top_k: int | None = None, *, intent=None
+    ) -> List[RetrievalResult]:
+        """
+        Search for top-k chunks matching the query.
+        
+        Implements the Retriever protocol.
+        """
+        if top_k is None:
+            top_k = self.config.top_k
+        
         if intent is None:
             intent = analyze(query)
 
-        candidate_k = max(top_k * 3, 20)
+        candidate_k = max(top_k * 3, self.config.candidate_k)
 
         if self.query_rewriter is not None:
             rewritten = self.query_rewriter.rewrite(query)
@@ -88,14 +106,14 @@ class HybridSearcher:
             dense_query = query
 
         dense_input = dense_query
-        if self.use_hyde and self.hyde_generator is not None:
+        if self.config.use_hyde and self.hyde_generator is not None:
             try:
                 hyde_answer = self.hyde_generator.generate_hypothetical_answer(query)
                 if hyde_answer:
                     dense_input = hyde_answer
             except Exception as e:
                 print(f"[HybridSearcher] HYDE error, falling back to normal dense search: {e}")
-                self.use_hyde = False
+                self.config.use_hyde = False
 
         bm25_results = self.bm25_index.search(bm25_query, top_k=candidate_k)
         dense_results = self.dense_index.search(dense_input, top_k=candidate_k)
@@ -113,7 +131,6 @@ class HybridSearcher:
                 continue
             ch = id_to_chunk[cid]
 
-            # Hard-filter noisy chunk types
             if ch.chunk_type in ("exercise", "references", "bibliography", "citations"):
                 continue
 
@@ -164,10 +181,24 @@ class HybridSearcher:
 
         if self.reranker is not None:
             reranked = self.reranker.rerank(query, scored)
-            return reranked[:top_k]
+            scored = reranked[:top_k]
+        else:
+            scored.sort(key=lambda x: x[1], reverse=True)
+            scored = scored[:top_k]
+        
+        results: List[RetrievalResult] = []
+        for chunk, score in scored:
+            source = "reranked" if self.reranker else "hybrid"
+            results.append(RetrievalResult(chunk=chunk, score=score, source=source))
+        
+        return results
 
-        scored.sort(key=lambda x: x[1], reverse=True)
-        return scored[:top_k]
+    def search_raw(
+        self, query: str, top_k: int = 5, *, intent=None
+    ) -> List[Tuple[ChunkRecord, float]]:
+        """Search and return raw (chunk, score) tuples for backward compatibility."""
+        results = self.search(query, top_k=top_k, intent=intent)
+        return [(r.chunk, r.score) for r in results]
 
     def search_with_context(
         self, query: str, top_k: int = 5, *, intent=None, window: int = 1
@@ -184,7 +215,7 @@ class HybridSearcher:
                 "Use from_chunks(..., use_context_expansion=True)"
             )
 
-        results = self.search(query, top_k=top_k, intent=intent)
+        raw_results = self.search_raw(query, top_k=top_k, intent=intent)
         by_book = build_book_index(self.chunks)
-        expanded = expand_with_neighbors(results, by_book=by_book, window=window)
+        expanded = expand_with_neighbors(raw_results, by_book=by_book, window=window)
         return expanded

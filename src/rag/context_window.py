@@ -4,7 +4,6 @@ Helpers for expanding retrieved chunks with neighboring chunks from the same boo
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Dict, Iterable, List, Sequence, Tuple
 
 from .index import ChunkRecord

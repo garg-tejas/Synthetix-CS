@@ -1,7 +1,5 @@
 """
 HYDE (Hypothetical Document Embeddings) helper.
-
-Generates a hypothetical answer paragraph and uses it as the query for semantic retrieval.
 """
 
 from __future__ import annotations
