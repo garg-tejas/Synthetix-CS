@@ -1,5 +1,5 @@
 """
-Batch processing CLI for generating QA pairs from chunks using ModelScope API.
+Batch processing CLI for generating QA pairs from chunks using an OpenAI-compatible API (Z.AI/GLM, ModelScope, etc.).
 """
 
 from __future__ import annotations
@@ -117,19 +117,19 @@ def save_checkpoint(checkpoint_path: Path, all_questions: List[dict]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate QA pairs from textbook chunks using ModelScope API."
+        description="Generate QA pairs from textbook chunks (Z.AI/GLM, ModelScope, or other OpenAI-compatible API)."
     )
     parser.add_argument(
         "--model",
         type=str,
         default=None,
-        help="Model name (default: from MODELSCOPE_MODEL env var, or Qwen/Qwen3-Coder-480B-A35B-Instruct)",
+        help="Model name (default: LLM_MODEL or MODELSCOPE_MODEL env var, e.g. glm-4.7-flash)",
     )
     parser.add_argument(
         "--modelscope-token",
         type=str,
         default=None,
-        help="ModelScope API token (or set MODELSCOPE_API_TOKEN env var)",
+        help="API key (or set LLM_API_KEY / MODELSCOPE_API_TOKEN env var)",
     )
     parser.add_argument(
         "--subject",
@@ -231,21 +231,19 @@ def main() -> None:
     print(f"Chunks to process this run: {total_to_process}")
     print(f"Expected new questions: ~{total_to_process * args.questions_per_chunk}")
 
-    print("\nInitializing ModelScope API client...")
+    print("\nInitializing LLM client...")
     try:
         llm_client = create_client(
             model_name=args.model,
             modelscope_token=args.modelscope_token,
         )
-        print(f"Using ModelScope API with model: {llm_client.model_name}")
+        print(f"Using model: {llm_client.model_name} ({llm_client.base_url})")
         print(f"Daily limit: 2000 calls (approx. {len(filtered_chunks) * args.questions_per_chunk} calls needed)")
     except Exception as e:
-        print(f"Error initializing ModelScope client: {e}")
-        print("\nMake sure openai is installed:")
-        print("  uv pip install openai")
-        print("\nSet ModelScope API token:")
-        print("  export MODELSCOPE_API_TOKEN=your_token")
-        print("  Get token from: https://modelscope.cn/my/myaccesstoken")
+        print(f"Error initializing client: {e}")
+        print("\nMake sure openai is installed: uv pip install openai")
+        print("\nSet API key (Z.AI/GLM): LLM_BASE_URL, LLM_API_KEY, LLM_MODEL in .env")
+        print("  Or ModelScope: MODELSCOPE_API_TOKEN (and optionally MODELSCOPE_MODEL)")
         return
 
     print("\nGenerating questions...")

@@ -11,7 +11,7 @@ slm-rag/
 │   ├── generation/    # Answer generation (Phase 2)
 │   ├── orchestrator/  # Agentic layer (Phase 3)
 │   ├── api/           # FastAPI backend (Phase 4)
-│   └── llm/           # ModelScope API client
+│   └── llm/           # LLM client (Z.AI/GLM, ModelScope, OpenAI-compatible)
 ├── data/              # Chunks and questions datasets
 ├── scripts/           # CLI utilities and preprocessing
 ├── tests/             # Test suite
@@ -24,7 +24,7 @@ slm-rag/
 - **Query Understanding**: Intent detection and query rewriting
 - **Reranking**: Cross-encoder reranking for improved results
 - **HYDE**: Hypothetical Document Embeddings for better semantic search
-- **Context Expansion**: Neighboring chunk expansion for better context
+- **Answer Generation**: Context builder with [1], [2] citation markers; LLM generation; citation extraction from response text
 
 ## Quick Start
 
@@ -34,8 +34,7 @@ slm-rag/
 # Copy environment template
 cp .env.example .env
 
-# Edit .env and add your ModelScope API token
-# Get token from: https://modelscope.cn/my/myaccesstoken
+# Edit .env: set LLM_BASE_URL, LLM_API_KEY, LLM_MODEL for Z.AI/GLM (see .env.example)
 ```
 
 ### 2. Install Dependencies
@@ -83,7 +82,16 @@ See [docs/QA_GENERATION.md](docs/QA_GENERATION.md) and [docs/EVALUATION.md](docs
 
 ## Environment Variables
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root. **Z.AI (GLM-4.7-flash)** is the default when set:
+
+```bash
+# Z.AI / GLM (recommended)
+LLM_BASE_URL=https://api.z.ai/api/paas/v4/
+LLM_API_KEY=your-Z.AI-api-key
+LLM_MODEL=glm-4.7-flash
+```
+
+Alternatively, use ModelScope:
 
 ```bash
 MODELSCOPE_API_TOKEN=your_token_here
@@ -92,11 +100,11 @@ MODELSCOPE_MODEL=deepseek-ai/DeepSeek-R1-0528  # Optional
 
 ## Development Status
 
-This project is structured in 5 phases:
+Phases:
 
-- **Phase 1**: Core RAG Pipeline (Current)
-- **Phase 2**: Answer Generation with Citations (Next)
-- **Phase 3**: Agentic Orchestrator
+- **Phase 1**: Core RAG Pipeline (done)
+- **Phase 2**: Answer Generation with Citations (done)
+- **Phase 3**: Agentic Orchestrator (next)
 - **Phase 4**: FastAPI Backend
 - **Phase 5**: Frontend + Documentation
 
