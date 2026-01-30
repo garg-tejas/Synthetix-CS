@@ -69,29 +69,50 @@ def _infer_subject_simple(chunk: ChunkRecord) -> str:
     return _infer_subject(chunk)
 
 
-def save_checkpoint(questions: List[dict], checkpoint_path: Path, chunk_id: str) -> None:
-    """Save intermediate results to checkpoint file."""
+def load_processed_chunk_ids(checkpoint_path: Path) -> set[str]:
+    """Load set of chunk IDs that already have questions in the checkpoint (for resume)."""
+    if not checkpoint_path.exists():
+        return set()
+    seen: set[str] = set()
+    with checkpoint_path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                q = json.loads(line)
+                cid = q.get("source_chunk_id")
+                if cid:
+                    seen.add(cid)
+            except json.JSONDecodeError:
+                continue
+    return seen
+
+
+def load_existing_questions(checkpoint_path: Path) -> List[dict]:
+    """Load all questions from checkpoint (for appending new batch)."""
+    if not checkpoint_path.exists():
+        return []
+    existing: List[dict] = []
+    with checkpoint_path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                try:
+                    existing.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    return existing
+
+
+def save_checkpoint(checkpoint_path: Path, all_questions: List[dict]) -> None:
+    """Write full question list to checkpoint (overwrite)."""
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-
-    existing = []
-    if checkpoint_path.exists():
-        with checkpoint_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    try:
-                        existing.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        continue
-
-    existing.extend(questions)
-
     with checkpoint_path.open("w", encoding="utf-8") as f:
         f.write("# Generated questions checkpoint\n")
-        for q in existing:
+        for q in all_questions:
             f.write(json.dumps(q, ensure_ascii=False) + "\n")
-
-    print(f"  Checkpoint saved: {len(existing)} total questions")
+    print(f"  Checkpoint saved: {len(all_questions)} total questions")
 
 
 def main() -> None:
@@ -183,6 +204,18 @@ def main() -> None:
         print("No chunks to process. Adjust filters.")
         return
 
+    # Resume: skip chunks already in checkpoint (unless --reset)
+    processed_ids: set[str] = set()
+    if not args.reset and args.checkpoint.exists():
+        processed_ids = load_processed_chunk_ids(args.checkpoint)
+        if processed_ids:
+            before = len(filtered_chunks)
+            filtered_chunks = [c for c in filtered_chunks if c.id not in processed_ids]
+            print(f"Resuming: {len(processed_ids)} chunks already in checkpoint, {len(filtered_chunks)} remaining")
+            if not filtered_chunks:
+                print("Nothing left to process. Use --reset to start over.")
+                return
+
     # Apply scoring and topic-diverse selection.
     target_count = args.max_chunks or len(filtered_chunks)
     print(
@@ -194,8 +227,9 @@ def main() -> None:
         target_count=target_count,
     )
 
-    print(f"Selected {len(filtered_chunks)} chunks to process")
-    print(f"Expected questions: ~{len(filtered_chunks) * args.questions_per_chunk}")
+    total_to_process = len(filtered_chunks)
+    print(f"Chunks to process this run: {total_to_process}")
+    print(f"Expected new questions: ~{total_to_process * args.questions_per_chunk}")
 
     print("\nInitializing ModelScope API client...")
     try:
@@ -217,8 +251,8 @@ def main() -> None:
     print("\nGenerating questions...")
     print("=" * 60)
 
-    all_questions = []
-    processed = 0
+    all_questions: List[dict] = load_existing_questions(args.checkpoint) if (args.checkpoint.exists() and not args.reset) else []
+    processed_this_run = 0
 
     for i in range(0, len(filtered_chunks), args.batch_size):
         batch = filtered_chunks[i : i + args.batch_size]
@@ -235,23 +269,24 @@ def main() -> None:
                 min_score=args.min_score,
             )
             all_questions.extend(batch_questions)
-            processed += len(batch)
+            processed_this_run += len(batch)
 
             print(f"  Generated {len(batch_questions)} questions from {len(batch)} chunks")
             if len(batch_questions) == 0:
                 print(f"  Warning: No questions generated. Check LLM responses and parsing logic.")
 
-            if (i + args.batch_size) % args.batch_size == 0 or i + args.batch_size >= len(
-                filtered_chunks
-            ):
-                save_checkpoint(batch_questions, args.checkpoint, batch[0].id if batch else "unknown")
-            
+            save_checkpoint(args.checkpoint, all_questions)
+
             # Delay between batches to avoid rate limits
             if i + args.batch_size < len(filtered_chunks):
                 delay = args.batch_delay
                 print(f"  Waiting {delay:.1f}s before next batch...")
                 time.sleep(delay)
 
+        except KeyboardInterrupt:
+            print("\n  Paused by user (Ctrl+C). Run the same command again to resume.")
+            save_checkpoint(args.checkpoint, all_questions)
+            return
         except Exception as e:
             print(f"  Error processing batch: {e}")
             print("  Continuing with next batch...")
@@ -259,8 +294,8 @@ def main() -> None:
 
     print("\n" + "=" * 60)
     print(f"Generation complete!")
-    print(f"  Processed: {processed}/{len(filtered_chunks)} chunks")
-    print(f"  Generated: {len(all_questions)} questions")
+    print(f"  Processed this run: {processed_this_run} chunks")
+    print(f"  Total questions in checkpoint: {len(all_questions)}")
     print(f"  Output: {args.checkpoint}")
 
     if all_questions:
