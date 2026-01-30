@@ -109,7 +109,7 @@ def save_checkpoint(checkpoint_path: Path, all_questions: List[dict]) -> None:
     """Write full question list to checkpoint (overwrite)."""
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
     with checkpoint_path.open("w", encoding="utf-8") as f:
-        f.write("# Generated questions checkpoint\n")
+        f.write("// Generated questions checkpoint\n")
         for q in all_questions:
             f.write(json.dumps(q, ensure_ascii=False) + "\n")
     print(f"  Checkpoint saved: {len(all_questions)} total questions")

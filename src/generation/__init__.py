@@ -1,12 +1,11 @@
 """
 Answer generation module for RAG pipeline.
 
-This module handles:
-- Context building from retrieved chunks
-- Answer generation with citations
+- Context building from retrieved chunks (citation markers [1], [2], ...)
+- Answer generation with citations (Phase 2)
 - Citation extraction and validation
 """
 
-# Phase 2 implementation will go here
+from .context_builder import build_context
 
-__all__ = []
+__all__ = ["build_context"]
