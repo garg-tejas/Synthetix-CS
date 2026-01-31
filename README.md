@@ -104,9 +104,25 @@ Phases:
 
 - **Phase 1**: Core RAG Pipeline (done)
 - **Phase 2**: Answer Generation with Citations (done)
-- **Phase 3**: Agentic Orchestrator (next)
-- **Phase 4**: FastAPI Backend
+- **Phase 3**: Agentic Orchestrator (done)
+- **Phase 4**: FastAPI Backend (next)
 - **Phase 5**: Frontend + Documentation
+
+## Running tests
+
+```bash
+# All tests
+uv run pytest tests/ -v
+
+# By module
+uv run pytest tests/test_retrieval.py -v
+uv run pytest tests/test_generation.py -v
+uv run pytest tests/test_orchestrator.py -v
+```
+
+- **test_retrieval.py**: BM25, dense index, hybrid searcher, RAGConfig.
+- **test_generation.py**: Context builder, citation extraction.
+- **test_orchestrator.py**: Query analyzer output shape, RAG agent single-hop (mocked retriever/generator), conversation memory add/get/clear, answer evaluator.
 
 ## Documentation
 
