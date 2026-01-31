@@ -8,9 +8,11 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from src.generation import AnswerGenerator, Citation, GeneratedAnswer
+from src.generation.context_builder import build_context
 from src.rag.config import RAGConfig
 from src.rag.retriever import Retriever, RetrievalResult
 
+from .evaluator import AnswerEvaluator
 from .query_analyzer import QueryAnalyzer, QueryAnalysis
 
 
@@ -47,11 +49,15 @@ class RAGAgent:
         generator: AnswerGenerator,
         query_analyzer: Optional[QueryAnalyzer] = None,
         rag_config: Optional[RAGConfig] = None,
+        evaluator: Optional[AnswerEvaluator] = None,
+        max_iterations: int = 2,
     ):
         self.retriever = retriever
         self.generator = generator
         self.query_analyzer = query_analyzer or QueryAnalyzer()
         self.rag_config = rag_config or RAGConfig()
+        self.evaluator = evaluator
+        self.max_iterations = max(1, max_iterations)
 
     def answer(
         self,
@@ -81,10 +87,22 @@ class RAGAgent:
                 citations=[],
                 sources_used=[],
             )
-        gen = self.generator.generate(query, results)
-        sources = [r.chunk.id for r in results]
-        return AgentResponse(
-            answer=gen.answer,
-            citations=gen.citations,
-            sources_used=sources,
-        )
+        resp: Optional[AgentResponse] = None
+        for iteration in range(self.max_iterations):
+            gen = self.generator.generate(query, results)
+            resp = AgentResponse(
+                answer=gen.answer,
+                citations=gen.citations,
+                sources_used=[r.chunk.id for r in results],
+            )
+            if self.evaluator is None:
+                return resp
+            context = build_context(results, max_tokens=2000)
+            eval_result = self.evaluator.evaluate(query, gen.answer, context)
+            if eval_result.is_complete or iteration == self.max_iterations - 1:
+                return resp
+            top_k = min(top_k + 5, self.rag_config.candidate_k)
+            results = self.retriever.search(query, top_k)
+            if not results:
+                return resp
+        return resp
