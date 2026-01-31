@@ -45,5 +45,12 @@ class ConversationMemory:
             parts.append(f"Q: {t.query}\nA: {t.answer}")
         return "\n\n".join(parts)
 
+    def get_history(self, last_n: int = 5) -> List[dict]:
+        """Return last N turns as list of dicts for the query analyzer."""
+        if not self._turns:
+            return []
+        turns = self._turns[-last_n:]
+        return [{"query": t.query, "answer": t.answer} for t in turns]
+
     def clear(self) -> None:
         self._turns.clear()

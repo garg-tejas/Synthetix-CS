@@ -13,6 +13,7 @@ from src.rag.config import RAGConfig
 from src.rag.retriever import Retriever, RetrievalResult
 
 from .evaluator import AnswerEvaluator
+from .memory import ConversationMemory
 from .query_analyzer import QueryAnalyzer, QueryAnalysis
 
 
@@ -50,6 +51,7 @@ class RAGAgent:
         query_analyzer: Optional[QueryAnalyzer] = None,
         rag_config: Optional[RAGConfig] = None,
         evaluator: Optional[AnswerEvaluator] = None,
+        memory: Optional[ConversationMemory] = None,
         max_iterations: int = 2,
     ):
         self.retriever = retriever
@@ -57,6 +59,7 @@ class RAGAgent:
         self.query_analyzer = query_analyzer or QueryAnalyzer()
         self.rag_config = rag_config or RAGConfig()
         self.evaluator = evaluator
+        self.memory = memory
         self.max_iterations = max(1, max_iterations)
 
     def answer(
@@ -65,13 +68,18 @@ class RAGAgent:
         history: Optional[List[dict]] = None,
     ) -> AgentResponse:
         """Analyze query, retrieve (single or multi-hop), generate answer."""
+        if history is None and self.memory is not None:
+            history = self.memory.get_history()
         analysis = self.query_analyzer.analyze(query, history)
         if not analysis.requires_retrieval:
-            return AgentResponse(
+            fallback = AgentResponse(
                 answer="I can only answer technical questions from the textbook. Ask about OS, DBMS, or computer networks.",
                 citations=[],
                 sources_used=[],
             )
+            if self.memory is not None:
+                self.memory.add_turn(query, fallback.answer, fallback.sources_used)
+            return fallback
         top_k = self.rag_config.top_k
         if analysis.complexity == "multi-part" and len(analysis.sub_queries) >= 2:
             result_lists: List[List[RetrievalResult]] = []
@@ -82,11 +90,14 @@ class RAGAgent:
         else:
             results = self.retriever.search(query, top_k)
         if not results:
-            return AgentResponse(
+            no_result = AgentResponse(
                 answer="No relevant passages were found. Try rephrasing your question.",
                 citations=[],
                 sources_used=[],
             )
+            if self.memory is not None:
+                self.memory.add_turn(query, no_result.answer, no_result.sources_used)
+            return no_result
         resp: Optional[AgentResponse] = None
         for iteration in range(self.max_iterations):
             gen = self.generator.generate(query, results)
@@ -96,13 +107,19 @@ class RAGAgent:
                 sources_used=[r.chunk.id for r in results],
             )
             if self.evaluator is None:
+                if self.memory is not None:
+                    self.memory.add_turn(query, resp.answer, resp.sources_used)
                 return resp
             context = build_context(results, max_tokens=2000)
             eval_result = self.evaluator.evaluate(query, gen.answer, context)
             if eval_result.is_complete or iteration == self.max_iterations - 1:
+                if self.memory is not None:
+                    self.memory.add_turn(query, resp.answer, resp.sources_used)
                 return resp
             top_k = min(top_k + 5, self.rag_config.candidate_k)
             results = self.retriever.search(query, top_k)
             if not results:
                 return resp
+        if self.memory is not None:
+            self.memory.add_turn(query, resp.answer, resp.sources_used)
         return resp
