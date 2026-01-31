@@ -1,5 +1,5 @@
 """
-RAG agent: query analysis, retrieval, and answer generation (single-hop).
+RAG agent: query analysis, retrieval, and answer generation (single-hop and multi-hop).
 """
 
 from __future__ import annotations
@@ -23,8 +23,23 @@ class AgentResponse:
     sources_used: List[str]
 
 
+def _merge_results(
+    result_lists: List[List[RetrievalResult]],
+    max_results: int,
+) -> List[RetrievalResult]:
+    """Dedupe by chunk.id (keep highest score), then take top max_results."""
+    by_id: dict[str, RetrievalResult] = {}
+    for results in result_lists:
+        for r in results:
+            cid = r.chunk.id
+            if cid not in by_id or r.score > by_id[cid].score:
+                by_id[cid] = r
+    merged = sorted(by_id.values(), key=lambda x: -x.score)
+    return merged[:max_results]
+
+
 class RAGAgent:
-    """Single-hop RAG: analyze query, retrieve, generate answer."""
+    """RAG agent: single-hop or multi-hop retrieval, then generate answer."""
 
     def __init__(
         self,
@@ -43,7 +58,7 @@ class RAGAgent:
         query: str,
         history: Optional[List[dict]] = None,
     ) -> AgentResponse:
-        """Analyze query, retrieve chunks, generate answer. Single-hop only."""
+        """Analyze query, retrieve (single or multi-hop), generate answer."""
         analysis = self.query_analyzer.analyze(query, history)
         if not analysis.requires_retrieval:
             return AgentResponse(
@@ -52,14 +67,21 @@ class RAGAgent:
                 sources_used=[],
             )
         top_k = self.rag_config.top_k
-        results: List[RetrievalResult] = self.retriever.search(query, top_k)
+        if analysis.complexity == "multi-part" and len(analysis.sub_queries) >= 2:
+            result_lists: List[List[RetrievalResult]] = []
+            k_per = max(2, top_k // len(analysis.sub_queries))
+            for sq in analysis.sub_queries:
+                result_lists.append(self.retriever.search(sq, k_per))
+            results = _merge_results(result_lists, top_k)
+        else:
+            results = self.retriever.search(query, top_k)
         if not results:
             return AgentResponse(
                 answer="No relevant passages were found. Try rephrasing your question.",
                 citations=[],
                 sources_used=[],
             )
-        gen: GeneratedAnswer = self.generator.generate(query, results)
+        gen = self.generator.generate(query, results)
         sources = [r.chunk.id for r in results]
         return AgentResponse(
             answer=gen.answer,
