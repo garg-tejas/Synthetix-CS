@@ -6,7 +6,7 @@ Citations are populated separately by citation extraction (see citations.py).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 from src.llm.client import ModelScopeClient
 from src.rag.retriever import RetrievalResult
@@ -54,3 +54,21 @@ class AnswerGenerator:
             citations=citations,
             confidence=0.0,
         )
+
+    def generate_stream(
+        self,
+        query: str,
+        results: List[RetrievalResult],
+        config: Optional[GenerationConfig] = None,
+    ) -> Iterator[str]:
+        """Yield token chunks from the LLM. Caller accumulates and runs extract_citations when done."""
+        config = config or GenerationConfig()
+        context = build_context(results, max_tokens=config.context_max_tokens)
+        prompt = ANSWER_PROMPT.format(context=context, query=query)
+        for chunk in self.client.stream(
+            prompt,
+            max_tokens=config.max_tokens,
+            temperature=config.temperature,
+        ):
+            if chunk:
+                yield chunk

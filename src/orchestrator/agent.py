@@ -5,7 +5,7 @@ RAG agent: query analysis, retrieval, and answer generation (single-hop and mult
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from src.generation import AnswerGenerator, Citation, GeneratedAnswer
 from src.generation.context_builder import build_context
@@ -61,6 +61,44 @@ class RAGAgent:
         self.evaluator = evaluator
         self.memory = memory
         self.max_iterations = max(1, max_iterations)
+
+    def retrieve(
+        self,
+        query: str,
+        history: Optional[List[dict]] = None,
+    ) -> Tuple[Optional[List[RetrievalResult]], Optional[AgentResponse]]:
+        """Run analysis and retrieval only. Returns (results, None) or (None, fallback_response)."""
+        if history is None and self.memory is not None:
+            history = self.memory.get_history()
+        analysis = self.query_analyzer.analyze(query, history)
+        if not analysis.requires_retrieval:
+            return (
+                None,
+                AgentResponse(
+                    answer="I can only answer technical questions from the textbook. Ask about OS, DBMS, or computer networks.",
+                    citations=[],
+                    sources_used=[],
+                ),
+            )
+        top_k = self.rag_config.top_k
+        if analysis.complexity == "multi-part" and len(analysis.sub_queries) >= 2:
+            result_lists: List[List[RetrievalResult]] = []
+            k_per = max(2, top_k // len(analysis.sub_queries))
+            for sq in analysis.sub_queries:
+                result_lists.append(self.retriever.search(sq, k_per))
+            results = _merge_results(result_lists, top_k)
+        else:
+            results = self.retriever.search(query, top_k)
+        if not results:
+            return (
+                None,
+                AgentResponse(
+                    answer="No relevant passages were found. Try rephrasing your question.",
+                    citations=[],
+                    sources_used=[],
+                ),
+            )
+        return (results, None)
 
     def answer(
         self,
