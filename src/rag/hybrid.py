@@ -4,6 +4,7 @@ Hybrid searcher combining BM25 and dense retrieval with RRF fusion.
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
@@ -39,6 +40,7 @@ class HybridSearcher:
     chunks: List[ChunkRecord] | None = None
     query_rewriter: QueryRewriter | None = None
     hyde_generator: HydeGenerator | None = None
+    _hyde_disabled: bool = False
 
     @classmethod
     def from_chunks(
@@ -53,6 +55,8 @@ class HybridSearcher:
         """Create a HybridSearcher from chunks."""
         if config is None:
             config = RAGConfig()
+        else:
+            config = dataclasses.replace(config)
         
         if use_reranker is not None:
             config.use_reranker = use_reranker
@@ -65,12 +69,13 @@ class HybridSearcher:
         stored_chunks = chunks if use_context_expansion else None
         rewriter = QueryRewriter() if config.use_query_rewriting else None
         hyde_gen: HydeGenerator | None = None
+        hyde_disabled = False
         if config.use_hyde:
             try:
                 hyde_gen = HydeGenerator.from_env()
             except Exception as e:
                 print(f"[HybridSearcher] HYDE disabled (initialization failed): {e}")
-                config.use_hyde = False
+                hyde_disabled = True
         return cls(
             bm25_index=bm25,
             dense_index=dense,
@@ -78,6 +83,7 @@ class HybridSearcher:
             reranker=reranker,
             chunks=stored_chunks,
             query_rewriter=rewriter,
+            _hyde_disabled=hyde_disabled,
             hyde_generator=hyde_gen,
         )
 
@@ -106,14 +112,14 @@ class HybridSearcher:
             dense_query = query
 
         dense_input = dense_query
-        if self.config.use_hyde and self.hyde_generator is not None:
+        if self.config.use_hyde and self.hyde_generator is not None and not self._hyde_disabled:
             try:
                 hyde_answer = self.hyde_generator.generate_hypothetical_answer(query)
                 if hyde_answer:
                     dense_input = hyde_answer
             except Exception as e:
                 print(f"[HybridSearcher] HYDE error, falling back to normal dense search: {e}")
-                self.config.use_hyde = False
+                self._hyde_disabled = True
 
         bm25_results = self.bm25_index.search(bm25_query, top_k=candidate_k)
         dense_results = self.dense_index.search(dense_input, top_k=candidate_k)

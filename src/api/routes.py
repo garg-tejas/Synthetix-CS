@@ -95,7 +95,7 @@ async def _stream_chat(
 
     thread = threading.Thread(target=run_stream)
     thread.start()
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     full_text = ""
     while True:
         kind, payload = await loop.run_in_executor(None, q.get)

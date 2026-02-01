@@ -28,7 +28,8 @@ def _load_cached_embeddings(chunks: List[ChunkRecord]) -> np.ndarray | None:
         current_ids = [c.id for c in chunks]
         if cached_ids == current_ids:
             return data["embeddings"]
-    except Exception:
+    except Exception as e:
+        print(f"[DenseIndex] Warning: failed to load embedding cache: {e}")
         return None
     return None
 
@@ -39,8 +40,8 @@ def _save_cached_embeddings(embeddings: np.ndarray, chunks: List[ChunkRecord]) -
         EMBEDDING_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         chunk_ids = np.array([c.id for c in chunks], dtype=object)
         np.savez(EMBEDDING_CACHE_PATH, embeddings=embeddings, chunk_ids=chunk_ids)
-    except Exception:
-        return
+    except Exception as e:
+        print(f"[DenseIndex] Warning: failed to save embedding cache: {e}")
 
 
 @dataclass

@@ -126,32 +126,3 @@ Return ONLY valid JSON, no markdown formatting, no code blocks:
 """
 
     return prompt
-
-
-def build_batch_prompt(chunks: List[ChunkRecord], questions_per_chunk: int = 1) -> str:
-    """
-    Build a prompt for generating questions from multiple chunks (for batch processing).
-    
-    This is less ideal than per-chunk prompts but can be faster.
-    """
-    if not chunks:
-        return ""
-
-    prompts = []
-    for i, chunk in enumerate(chunks, 1):
-        prompts.append(f"\n--- Chunk {i} ---")
-        prompts.append(f"Header: {chunk.header_path}")
-        prompts.append(f"Type: {chunk.chunk_type}")
-        prompts.append(f"Text: {chunk.text[:800]}...")
-
-    combined_text = "\n".join(prompts)
-
-    prompt = f"""Generate {questions_per_chunk} question(s) for each of the following textbook chunks.
-
-{combined_text}
-
-For each chunk, generate questions following the same format as the single-chunk prompt.
-Return JSON with questions grouped by chunk index.
-"""
-
-    return prompt
