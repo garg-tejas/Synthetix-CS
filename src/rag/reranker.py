@@ -4,6 +4,7 @@ Cross-encoder reranker for second-stage re-ranking of retrieved chunks.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Iterable, List, Tuple
 
@@ -11,8 +12,7 @@ from sentence_transformers import CrossEncoder
 
 from .index import ChunkRecord
 
-
-DEFAULT_RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+DEFAULT_RERANKER_MODEL = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
 
 
 @dataclass

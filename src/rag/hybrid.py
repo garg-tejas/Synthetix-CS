@@ -5,6 +5,7 @@ Hybrid searcher combining BM25 and dense retrieval with RRF fusion.
 from __future__ import annotations
 
 import dataclasses
+import logging
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
@@ -24,6 +25,7 @@ from .reranker import CrossEncoderReranker
 from .retriever import RetrievalResult
 from .rrf_merger import rrf_merge
 
+logger = logging.getLogger(__name__)
 
 DEFINITION_BOOST = 1.5
 NEGATIVE_PENALTY = 0.25
@@ -74,7 +76,7 @@ class HybridSearcher:
             try:
                 hyde_gen = HydeGenerator.from_env()
             except Exception as e:
-                print(f"[HybridSearcher] HYDE disabled (initialization failed): {e}")
+                logger.warning("HYDE disabled (initialization failed): %s", e)
                 hyde_disabled = True
         return cls(
             bm25_index=bm25,
@@ -118,7 +120,7 @@ class HybridSearcher:
                 if hyde_answer:
                     dense_input = hyde_answer
             except Exception as e:
-                print(f"[HybridSearcher] HYDE error, falling back to normal dense search: {e}")
+                logger.warning("HYDE error, falling back to normal dense search: %s", e)
                 self._hyde_disabled = True
 
         bm25_results = self.bm25_index.search(bm25_query, top_k=candidate_k)

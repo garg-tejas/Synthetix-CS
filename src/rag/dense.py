@@ -4,6 +4,8 @@ Dense semantic retriever using sentence-transformers.
 
 from __future__ import annotations
 
+import os
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
@@ -13,8 +15,9 @@ from sentence_transformers import SentenceTransformer
 
 from .index import CHUNKS_PATH, ChunkRecord
 
+logger = logging.getLogger(__name__)
 
-MODEL_NAME = "all-MiniLM-L6-v2"
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 EMBEDDING_CACHE_PATH = CHUNKS_PATH.with_name("embeddings_cache.npz")
 
 
@@ -29,7 +32,7 @@ def _load_cached_embeddings(chunks: List[ChunkRecord]) -> np.ndarray | None:
         if cached_ids == current_ids:
             return data["embeddings"]
     except Exception as e:
-        print(f"[DenseIndex] Warning: failed to load embedding cache: {e}")
+        logger.warning("Failed to load embedding cache: %s", e)
         return None
     return None
 
@@ -41,7 +44,7 @@ def _save_cached_embeddings(embeddings: np.ndarray, chunks: List[ChunkRecord]) -
         chunk_ids = np.array([c.id for c in chunks], dtype=object)
         np.savez(EMBEDDING_CACHE_PATH, embeddings=embeddings, chunk_ids=chunk_ids)
     except Exception as e:
-        print(f"[DenseIndex] Warning: failed to save embedding cache: {e}")
+        logger.warning("Failed to save embedding cache: %s", e)
 
 
 @dataclass
@@ -55,7 +58,7 @@ class DenseIndex:
     @classmethod
     def from_chunks(cls, chunks: List[ChunkRecord]) -> "DenseIndex":
         """Build dense index from chunks with caching."""
-        model = SentenceTransformer(MODEL_NAME)
+        model = SentenceTransformer(EMBEDDING_MODEL)
 
         emb = _load_cached_embeddings(chunks)
         if emb is None:

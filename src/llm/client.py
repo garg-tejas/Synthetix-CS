@@ -4,6 +4,7 @@ LLM client for OpenAI-compatible APIs (ModelScope, Z.AI/GLM, DeepSeek, etc.).
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from pathlib import Path
@@ -29,6 +30,8 @@ LLM_MODEL = os.getenv("LLM_MODEL", "glm-4.7-flash")
 # ModelScope fallback
 DEFAULT_MODELSCOPE_MODEL = os.getenv("MODELSCOPE_MODEL", "deepseek-ai/DeepSeek-R1-0528")
 DEFAULT_MODELSCOPE_BASE_URL = "https://api-inference.modelscope.ai/v1"
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_client_params(
@@ -123,10 +126,14 @@ class ModelScopeClient:
                         if not generated_text.strip() and getattr(msg, "reasoning_content", None):
                             generated_text = (msg.reasoning_content or "").strip()
                         if not generated_text.strip():
-                            print(f"Warning: Empty content in response for prompt {i+1} (finish_reason={getattr(response.choices[0], 'finish_reason', '?')})")
+                            logger.warning(
+                                "Empty content in response for prompt %s (finish_reason=%s)",
+                                i + 1,
+                                getattr(response.choices[0], "finish_reason", "?"),
+                            )
                         results.append(generated_text.strip())
                     else:
-                        print(f"Warning: Empty response from API for prompt {i+1}")
+                        logger.warning("Empty response from API for prompt %s", i + 1)
                         results.append("")
 
                     # Rate limiting: delay between requests to avoid concurrency limits
@@ -142,17 +149,22 @@ class ModelScopeClient:
                     if "429" in error_str or "concurrency" in error_str.lower() or "1302" in error_str:
                         retry_count += 1
                         if retry_count >= max_retries:
-                            print(f"Rate limit exceeded after {max_retries} retries. Skipping prompt.")
+                            logger.warning("Rate limit exceeded after %s retries. Skipping prompt.", max_retries)
                             results.append("")
                             # Longer delay before continuing to next prompt
                             time.sleep(10 + random.uniform(0, 5))
                             break
                         # Exponential backoff with jitter for concurrency limits
                         backoff = (2 ** retry_count) * 3 + random.uniform(0, 3)
-                        print(f"Rate limit hit (429/concurrency). Retrying in {backoff:.1f}s (attempt {retry_count}/{max_retries})...")
+                        logger.warning(
+                            "Rate limit hit (429/concurrency). Retrying in %s s (attempt %s/%s)",
+                            round(backoff, 1),
+                            retry_count,
+                            max_retries,
+                        )
                         time.sleep(backoff)
                     else:
-                        print(f"Error calling API: {e}")
+                        logger.error("Error calling API: %s", e)
                         results.append("")
                         time.sleep(2)
                         break
@@ -188,7 +200,7 @@ class ModelScopeClient:
                     yield chunk.choices[0].delta.content
 
         except Exception as e:
-            print(f"Error streaming from API: {e}")
+            logger.error("Error streaming from API: %s", e)
             yield ""
 
 

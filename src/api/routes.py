@@ -166,7 +166,7 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse | JSONRespon
     )
 
 
-@router.post("/chat/stream")
+@router.post("/chat/stream", response_model=None)
 async def chat_stream(request: Request, body: ChatRequest) -> StreamingResponse | JSONResponse:
     """Stream answer tokens via SSE; final event has citations and chunks_used."""
     agent, _, chunks_by_id, chunks_loaded = _get_state(request)
