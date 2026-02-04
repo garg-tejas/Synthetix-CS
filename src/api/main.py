@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .deps import build_agent_and_chunks
 from .routes import router
+from src.auth.routes import router as auth_router
 
 
 @asynccontextmanager
@@ -34,3 +35,4 @@ app = FastAPI(
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.include_router(router)
+app.include_router(auth_router)
