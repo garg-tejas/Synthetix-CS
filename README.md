@@ -78,8 +78,6 @@ uv run python -m eval.runners.run_question_eval --top-k 5
 uv run python -m eval.runners.run_evaluation --subject os
 ```
 
-See [docs/QA_GENERATION.md](docs/QA_GENERATION.md) and [docs/EVALUATION.md](docs/EVALUATION.md) for detailed guides.
-
 ## Environment Variables
 
 Create a `.env` file in the project root. **Z.AI (GLM-4.7-flash)** is the default when set:
@@ -98,6 +96,21 @@ MODELSCOPE_API_TOKEN=your_token_here
 MODELSCOPE_MODEL=deepseek-ai/DeepSeek-R1-0528  # Optional
 ```
 
+## Run the API
+
+Requires `data/chunks.jsonl` and LLM env vars. On startup the API loads chunks and builds the RAG agent.
+
+```bash
+uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+- **GET /api/health** - Health check (chunks_loaded)
+- **GET /api/stats** - Active conversation count
+- **POST /api/chat** - Body: `{"query": "...", "conversation_id": "optional"}` (full response)
+- **POST /api/chat/stream** - Same body; SSE stream of `token` events then one `done` event with citations and chunks_used
+- **POST /api/search** - Body: `{"query": "...", "top_k": 5}` (raw retrieval, no generation)
+- **DELETE /api/conversation?conversation_id=default** - Clear conversation history
+
 ## Development Status
 
 Phases:
@@ -105,8 +118,8 @@ Phases:
 - **Phase 1**: Core RAG Pipeline (done)
 - **Phase 2**: Answer Generation with Citations (done)
 - **Phase 3**: Agentic Orchestrator (done)
-- **Phase 4**: FastAPI Backend (next)
-- **Phase 5**: Frontend + Documentation
+- **Phase 4**: FastAPI Backend (done)
+- **Phase 5**: Frontend + Documentation (next)
 
 ## Running tests
 

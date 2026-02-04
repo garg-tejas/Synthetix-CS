@@ -13,6 +13,11 @@ dependencies = [
     "requests>=2.31.0",
     "sentence-transformers>=3.0.0",
     "uvicorn[standard]>=0.24.0",
+    "sqlalchemy>=2.0.46",
+    "asyncpg>=0.31.0",
+    "alembic>=1.18.3",
+    "passlib[bcrypt]>=1.7.4",
+    "python-jose[cryptography]>=3.5.0",
 ]
 
 [project.optional-dependencies]
