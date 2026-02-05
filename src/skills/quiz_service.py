@@ -4,7 +4,8 @@ import datetime as dt
 from dataclasses import dataclass
 from typing import Iterable, List, Optional, Sequence
 
-from src.db.models import Card, ReviewState, Topic
+from src.db.models import Card, ReviewAttempt, ReviewState, Topic
+from src.skills.scheduler import SM2Scheduler
 
 
 @dataclass
@@ -26,6 +27,7 @@ class QuizService:
 
     def __init__(self, config: Optional[QuizSelectionConfig] = None) -> None:
         self.config = config or QuizSelectionConfig()
+        self.scheduler = SM2Scheduler()
 
     def get_next_cards(
         self,
@@ -98,4 +100,130 @@ class QuizService:
                     break
 
         return due_cards + new_cards
+
+    def record_attempt(
+        self,
+        *,
+        user_id: int,
+        card: Card,
+        review_state: Optional[ReviewState],
+        quality: int,
+        response_time_ms: Optional[int] = None,
+        now: Optional[dt.datetime] = None,
+    ) -> tuple[ReviewState, ReviewAttempt]:
+        """
+        Record a quiz attempt and compute the next review state.
+
+        This method is DB-agnostic: it creates or updates `ReviewState`
+        and constructs a `ReviewAttempt`, but does not persist them.
+        Callers are responsible for adding them to a session and committing.
+        """
+        if quality < 0 or quality > 5:
+            raise ValueError("quality must be between 0 and 5")
+
+        now = now or dt.datetime.now(dt.timezone.utc)
+
+        state = review_state
+        if state is None:
+            state = ReviewState(
+                user_id=user_id,
+                card_id=card.id,
+                repetitions=0,
+                interval_days=0,
+                ease_factor=self.scheduler.config.initial_ease_factor,
+                due_at=None,
+                last_reviewed_at=None,
+                lapses=0,
+            )
+
+        # Update spaced-repetition state using SM-2.
+        updated_state = self.scheduler.compute_next(state, quality=quality, now=now)
+
+        attempt = ReviewAttempt(
+            user_id=user_id,
+            card_id=card.id,
+            attempted_at=now,
+            quality=quality,
+            response_time_ms=response_time_ms,
+        )
+
+        return updated_state, attempt
+
+    def get_stats(
+        self,
+        *,
+        user_id: int,
+        cards: Sequence[Card],
+        review_states: Iterable[ReviewState],
+        topics: Optional[Sequence[str]] = None,
+        now: Optional[dt.datetime] = None,
+    ) -> List[dict]:
+        """
+        Compute per-topic quiz statistics for a user.
+
+        Returns a list of dicts with keys:
+            topic, total, learned, due_today, overdue
+        """
+        now = now or dt.datetime.now(dt.timezone.utc)
+        today = now.date()
+        topic_filter = set(topics) if topics else None
+
+        def _topic_name(card: Card) -> Optional[str]:
+            topic: Optional[Topic] = getattr(card, "topic", None)
+            if topic is None:
+                return None
+            return getattr(topic, "name", None)
+
+        # Map card_id -> card and topic.
+        card_by_id: dict[int, Card] = {}
+        topic_for_card: dict[int, Optional[str]] = {}
+
+        for card in cards:
+            name = _topic_name(card)
+            if topic_filter is not None and name not in topic_filter:
+                continue
+            card_by_id[card.id] = card
+            topic_for_card[card.id] = name
+
+        # Initialize counters.
+        stats: dict[str, dict] = {}
+
+        for card_id, card in card_by_id.items():
+            topic_name = topic_for_card.get(card_id) or "unknown"
+            if topic_name not in stats:
+                stats[topic_name] = {
+                    "topic": topic_name,
+                    "total": 0,
+                    "learned": 0,
+                    "due_today": 0,
+                    "overdue": 0,
+                }
+            stats[topic_name]["total"] += 1
+
+        # Aggregate over review states for this user.
+        for rs in review_states:
+            if rs.user_id != user_id:
+                continue
+            if rs.card_id not in card_by_id:
+                continue
+
+            topic_name = topic_for_card.get(rs.card_id) or "unknown"
+            entry = stats.setdefault(
+                topic_name,
+                {"topic": topic_name, "total": 0, "learned": 0, "due_today": 0, "overdue": 0},
+            )
+
+            if rs.repetitions > 0:
+                entry["learned"] += 1
+
+            if rs.due_at is None:
+                continue
+
+            due_date = rs.due_at.date()
+            if due_date < today:
+                entry["overdue"] += 1
+            elif due_date == today:
+                entry["due_today"] += 1
+
+        return list(stats.values())
 
