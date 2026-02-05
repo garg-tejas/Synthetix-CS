@@ -11,6 +11,7 @@ from src.auth.dependencies import get_current_active_user
 from src.db.models import Card, ReviewAttempt, ReviewState, Topic, User
 from src.db.session import get_db
 from src.skills.quiz_service import QuizService
+from src.skills.grader import grade_answer
 from src.skills.schemas import (
     QuizAnswerRequest,
     QuizAnswerResponse,
@@ -144,21 +145,6 @@ async def submit_quiz_answer(
     )
     review_state = state_result.scalar_one_or_none()
 
-    updated_state, attempt = svc.record_attempt(
-        user_id=current_user.id,
-        card=card,
-        review_state=review_state,
-        quality=payload.quality,
-        response_time_ms=payload.response_time_ms,
-    )
-
-    # Persist changes.
-    if review_state is None:
-        db.add(updated_state)
-    db.add(attempt)
-    await db.commit()
-    await db.refresh(updated_state)
-
     # RAG-style context: use source_chunk_id to pull the underlying chunk text
     # from the already loaded RAG chunks, if available.
     explanation = None
@@ -170,10 +156,37 @@ async def submit_quiz_answer(
             max_len = 600
             explanation = text[:max_len] + ("…" if len(text) > max_len else "")
 
+    # Use LLM-based grader to score the user's answer on a 0–5 scale.
+    subject = card.topic.name if card.topic else None  # type: ignore[union-attr]
+    grade = grade_answer(
+        question=card.question,
+        reference_answer=card.answer,
+        user_answer=payload.user_answer,
+        subject=subject,
+        context_excerpt=explanation,
+    )
+
+    updated_state, attempt = svc.record_attempt(
+        user_id=current_user.id,
+        card=card,
+        review_state=review_state,
+        quality=grade.score_0_5,
+        response_time_ms=payload.response_time_ms,
+    )
+
+    # Persist changes.
+    if review_state is None:
+        db.add(updated_state)
+    db.add(attempt)
+    await db.commit()
+    await db.refresh(updated_state)
+
     return QuizAnswerResponse(
         answer=card.answer,
         explanation=explanation,
         source_chunk_id=card.source_chunk_id,
+        model_score=grade.score_0_5,
+        verdict=grade.verdict,
         next_due_at=updated_state.due_at.isoformat() if updated_state.due_at else None,
         interval_days=updated_state.interval_days,
     )

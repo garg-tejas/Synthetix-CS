@@ -48,11 +48,15 @@ class QuizAnswerRequest(BaseModel):
     """Request body for submitting an answer rating."""
 
     card_id: int
-    quality: int = Field(
+    user_answer: str = Field(
         ...,
+        description="The user's free-text answer to the question",
+    )
+    quality: Optional[int] = Field(
+        default=None,
         ge=0,
         le=5,
-        description="Self-assessed quality score from 0 (complete blackout) to 5 (perfect recall)",
+        description="Optional self-assessed quality score from 0 (complete blackout) to 5 (perfect recall)",
     )
     response_time_ms: Optional[int] = Field(
         default=None,
@@ -67,6 +71,16 @@ class QuizAnswerResponse(BaseModel):
     answer: str
     explanation: Optional[str] = None
     source_chunk_id: Optional[str] = None
+    model_score: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=5,
+        description="Model-graded score from 0 to 5",
+    )
+    verdict: Optional[str] = Field(
+        default=None,
+        description="High-level grading verdict: correct, partially_correct, or incorrect",
+    )
     next_due_at: Optional[str] = Field(
         default=None,
         description="ISO timestamp of the next scheduled review for this card",

@@ -43,7 +43,7 @@ def test_quiz_endpoints_require_auth():
     r_stats = client.get("/api/quiz/stats")
     r_answer = client.post(
         "/api/quiz/answer",
-        json={"card_id": 1, "quality": 3},
+        json={"card_id": 1, "user_answer": "test answer", "quality": 3},
     )
 
     assert r_topics.status_code == 401
@@ -86,7 +86,7 @@ def test_quiz_answer_nonexistent_card_returns_404():
 
     r = client.post(
         "/api/quiz/answer",
-        json={"card_id": 999999, "quality": 3},
+        json={"card_id": 999999, "user_answer": "test answer", "quality": 3},
         headers=headers,
     )
     assert r.status_code in (404, 400)
