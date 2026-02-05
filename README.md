@@ -20,7 +20,7 @@ This repository combines a retrieval-augmented question answering system with a 
   - Auth routes: `/auth/signup`, `/auth/login`, `/auth/refresh`, `/auth/me`
 - **Evaluation and content tooling**
   - Question generation and validation under `eval/generation/`
-  - `scripts/seed_cards.py` dry-run script to summarize validated questions before seeding
+  - `scripts/seed_cards.py` to summarize validated questions and seed `Topic` / `Card` rows into PostgreSQL
 - **Test coverage**
   - Retrieval, generation, orchestrator, API routes, and auth utilities covered by pytest
 
@@ -55,10 +55,11 @@ docs/           Architecture and evaluation notes
 
 ## Notes on usage and setup
 
-The codebase already supports:
+At a high level the system already supports:
 
 - Running the RAG API over `data/chunks.jsonl`
 - Using Z.AI / GLM (or alternative providers) via `.env`
 - Running Alembic migrations against PostgreSQL
+- Seeding quiz content into `topics` and `cards` from the validated QA file
 
-Detailed setup, run commands, and examples will be documented separately as the skill tracker APIs and UI solidify. For now, the best references are the tests under `tests/` and the documents in `docs/`.
+For step‑by‑step instructions (Postgres, migrations, seeding, and running the API), see `docs/SETUP.md`.
