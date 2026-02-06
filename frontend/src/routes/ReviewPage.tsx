@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { getNextCards, submitAnswer } from '../api/quiz'
 import type { ApiError } from '../api/client'
@@ -13,6 +13,7 @@ interface CurrentCardState {
 
 export default function ReviewPage() {
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [cards, setCards] = useState<QuizCard[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -37,7 +38,9 @@ export default function ReviewPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const data = await getNextCards({ limit: 10 })
+        const state = location.state as { topics?: string[] | null } | null
+        const topics = state?.topics && state.topics.length ? state.topics : undefined
+        const data = await getNextCards({ limit: 10, topics })
         if (cancelled) return
         setCards(data.cards || [])
         if (data.cards && data.cards.length > 0) {

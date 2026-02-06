@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { getStats } from '../api/quiz'
+import { getStats, getTopics } from '../api/quiz'
 import type { ApiError } from '../api/client'
 import type { TopicStats } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
@@ -11,6 +11,8 @@ export default function DashboardPage() {
   const navigate = useNavigate()
 
   const [topics, setTopics] = useState<TopicStats[]>([])
+  const [availableTopics, setAvailableTopics] = useState<string[]>([])
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -20,9 +22,12 @@ export default function DashboardPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const data = await getStats()
+        const [stats, topicsList] = await Promise.all([getStats(), getTopics()])
         if (cancelled) return
-        setTopics(data.topics || [])
+        setTopics(stats.topics || [])
+        const names = (topicsList || []).map((t) => t.topic).sort()
+        setAvailableTopics(names)
+        setSelectedTopics(names)
       } catch (err) {
         if (cancelled) return
         const apiErr = err as ApiError
@@ -85,10 +90,33 @@ export default function DashboardPage() {
         <StatCard label="Overdue" value={totals.overdue} />
       </section>
 
-      <section style={{ marginBottom: 18 }}>
+      <section style={{ marginBottom: 18, display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {availableTopics.map((name) => {
+            const checked = selectedTopics.includes(name)
+            return (
+              <label key={name} style={{ fontSize: 13, display: 'inline-flex', gap: 4 }}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => {
+                    setSelectedTopics((prev) =>
+                      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]
+                    )
+                  }}
+                />
+                {name}
+              </label>
+            )
+          })}
+        </div>
         <button
           type="button"
-          onClick={() => navigate('/review')}
+          onClick={() =>
+            navigate('/review', {
+              state: { topics: selectedTopics.length ? selectedTopics : null },
+            })
+          }
           style={{
             padding: '10px 12px',
             cursor: 'pointer',
