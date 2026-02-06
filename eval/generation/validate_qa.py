@@ -7,12 +7,18 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 
+from .interview_quality import assess_interview_quality
 from src.rag import HybridSearcher, load_chunks
 
 
-def validate_question(question: Dict, chunk_id: Optional[str] = None) -> tuple[bool, List[str]]:
+def validate_question(
+    question: Dict,
+    chunk_id: Optional[str] = None,
+    min_interview_score: int = 70,
+    require_llm_score: bool = True,
+) -> tuple[bool, List[str]]:
     """
     Validate a single question for quality.
     
@@ -55,6 +61,47 @@ def validate_question(question: Dict, chunk_id: Optional[str] = None) -> tuple[b
     atomic_facts = question.get("atomic_facts", [])
     if not atomic_facts or len(atomic_facts) < 2:
         errors.append("Need at least 2 atomic_facts")
+
+    # Structural quality gate (keyword-agnostic).
+    if chunk_id and not question.get("source_chunk_id"):
+        question["source_chunk_id"] = chunk_id
+
+    structural = assess_interview_quality(question, min_score=0)
+    question["structural_quality_score"] = structural.score
+    if structural.reasons:
+        question["structural_quality_reasons"] = structural.reasons
+    if structural.score < 55:
+        errors.append(f"Structural quality too low ({structural.score} < 55)")
+        if structural.reasons:
+            errors.append(f"Structural details: {structural.reasons[0]}")
+
+    # LLM review gate.
+    llm_score_raw = question.get("llm_interview_score")
+    quality_score_raw = question.get("quality_score")
+    llm_decision = str(question.get("llm_review_decision") or "").strip().lower()
+
+    llm_score: Optional[int]
+    quality_score: Optional[int]
+    try:
+        llm_score = int(llm_score_raw) if llm_score_raw is not None else None
+    except (TypeError, ValueError):
+        llm_score = None
+    try:
+        quality_score = int(quality_score_raw) if quality_score_raw is not None else None
+    except (TypeError, ValueError):
+        quality_score = None
+
+    effective = quality_score if quality_score is not None else llm_score
+    if require_llm_score and effective is None:
+        errors.append("Missing LLM score fields. Run eval.generation.score_questions first.")
+    if require_llm_score and llm_decision not in {"keep", "rewrite", "reject"}:
+        errors.append("Missing or invalid llm_review_decision")
+    if effective is not None and effective < min_interview_score:
+        errors.append(
+            f"Interview quality score too low ({effective} < {min_interview_score})"
+        )
+    if llm_decision == "reject":
+        errors.append("LLM reviewer decision is reject")
 
     return len(errors) == 0, errors
 
@@ -132,6 +179,9 @@ def validate_and_filter(
     questions: List[Dict],
     auto_link: bool = False,
     searcher: Optional[HybridSearcher] = None,
+    min_interview_score: int = 70,
+    deduplicate: bool = True,
+    require_llm_score: bool = True,
 ) -> tuple[List[Dict], List[Dict]]:
     """
     Validate and filter questions.
@@ -143,7 +193,11 @@ def validate_and_filter(
     invalid = []
 
     for q in questions:
-        is_valid, errors = validate_question(q)
+        is_valid, errors = validate_question(
+            q,
+            min_interview_score=min_interview_score,
+            require_llm_score=require_llm_score,
+        )
         
         if is_valid:
             # Auto-link chunks if requested
@@ -157,7 +211,8 @@ def validate_and_filter(
             invalid.append(q)
 
     # Deduplicate valid questions
-    valid = deduplicate_questions(valid)
+    if deduplicate:
+        valid = deduplicate_questions(valid)
 
     return valid, invalid
 
@@ -183,10 +238,20 @@ def main() -> None:
         help="Automatically link supporting chunks using retrieval",
     )
     parser.add_argument(
-        "--deduplicate",
+        "--no-deduplicate",
         action="store_true",
-        default=True,
-        help="Remove duplicate questions (default: True)",
+        help="Disable duplicate removal",
+    )
+    parser.add_argument(
+        "--min-interview-score",
+        type=int,
+        default=85,
+        help="Minimum LLM/effective interview score (0-100) to keep a question",
+    )
+    parser.add_argument(
+        "--allow-unscored",
+        action="store_true",
+        help="Allow questions without llm_interview_score/quality_score",
     )
 
     args = parser.parse_args()
@@ -201,7 +266,7 @@ def main() -> None:
     with args.input_file.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            if not line or line.startswith("#"):
+            if not line or line.startswith("#") or line.startswith("//"):
                 continue
             try:
                 questions.append(json.loads(line))
@@ -225,6 +290,9 @@ def main() -> None:
         questions,
         auto_link=args.auto_link,
         searcher=searcher,
+        min_interview_score=args.min_interview_score,
+        deduplicate=not args.no_deduplicate,
+        require_llm_score=not args.allow_unscored,
     )
 
     print(f"\nValidation results:")

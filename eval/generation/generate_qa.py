@@ -6,11 +6,16 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from src.llm.client import ModelScopeClient
 from src.rag.index import ChunkRecord
+from .interview_quality import assess_interview_quality
+from .llm_review import review_questions_with_llm
 from .prompts import build_qa_generation_prompt
+
+
+QualityMode = Literal["deterministic", "llm_hybrid", "llm_only"]
 
 
 def parse_llm_response(response: str) -> List[Dict]:
@@ -62,6 +67,8 @@ def generate_questions_from_chunk(
     num_questions: int = 2,
     max_retries: int = 2,
     min_score: int = 70,
+    quality_mode: QualityMode = "llm_hybrid",
+    llm_allow_rewrite: bool = True,
     *,
     prev_chunk: Optional[ChunkRecord] = None,
     next_chunk: Optional[ChunkRecord] = None,
@@ -74,6 +81,12 @@ def generate_questions_from_chunk(
         llm_client: Initialized ModelScopeClient
         num_questions: Number of questions to generate
         max_retries: Number of retries if parsing fails
+        min_score: Minimum quality score (0-100)
+        quality_mode: Quality filter strategy:
+            - deterministic: structural-only post filter
+            - llm_hybrid: LLM review + placement score blend
+            - llm_only: LLM review as primary gate
+        llm_allow_rewrite: Whether LLM reviewer may rewrite borderline questions
     
     Returns:
         List of question dictionaries with keys: query, answer, question_type, atomic_facts, difficulty
@@ -102,21 +115,86 @@ def generate_questions_from_chunk(
             questions = parse_llm_response(response)
 
             if questions:
-                # Add metadata and filter by placement_interview_score when present
-                kept = []
+                # Add source metadata to every candidate.
+                candidates = []
                 for q in questions:
                     q["source_chunk_id"] = chunk.id
                     q["source_header"] = chunk.header_path
                     q["source_subject"] = chunk.subject or _infer_subject(chunk)
-                    score = q.get("placement_interview_score")
-                    if score is not None:
+                    placement_score = q.get("placement_interview_score")
+                    if placement_score is not None:
                         try:
-                            q["placement_interview_score"] = int(score)
+                            q["placement_interview_score"] = int(placement_score)
                         except (TypeError, ValueError):
                             q["placement_interview_score"] = 100
                     else:
                         q["placement_interview_score"] = 100
-                    if q["placement_interview_score"] >= min_score:
+                    candidates.append(q)
+
+                # Optional LLM second-pass review (keep/rewrite/reject).
+                if quality_mode in {"llm_hybrid", "llm_only"}:
+                    review = review_questions_with_llm(
+                        questions=candidates,
+                        chunk=chunk,
+                        llm_client=llm_client,
+                        min_score=min_score,
+                        allow_rewrite=llm_allow_rewrite,
+                        max_retries=max_retries,
+                    )
+                    if review.success:
+                        candidates = review.accepted
+                    elif quality_mode == "llm_only":
+                        # Strict mode: if reviewer fails, fail closed.
+                        return []
+
+                kept = []
+                for q in candidates:
+                    # Structural sanity gate (keyword-agnostic).
+                    structural_quality = assess_interview_quality(
+                        q,
+                        chunk=chunk,
+                        min_score=0,
+                    )
+                    q["structural_quality_score"] = structural_quality.score
+                    if structural_quality.reasons:
+                        q["structural_quality_reasons"] = structural_quality.reasons
+
+                    llm_score = q.get("llm_interview_score")
+                    llm_score_int: Optional[int] = None
+                    if llm_score is not None:
+                        try:
+                            llm_score_int = max(0, min(100, int(llm_score)))
+                        except (TypeError, ValueError):
+                            llm_score_int = None
+
+                    # Final score composition by mode.
+                    if quality_mode == "llm_only":
+                        effective_score = llm_score_int if llm_score_int is not None else 0
+                        keep = (
+                            q.get("llm_review_decision") in {"keep", "rewrite"}
+                            and effective_score >= min_score
+                            and structural_quality.score >= 55
+                        )
+                    elif quality_mode == "llm_hybrid" and llm_score_int is not None:
+                        effective_score = round(
+                            0.35 * q["placement_interview_score"]
+                            + 0.65 * llm_score_int
+                        )
+                        keep = (
+                            effective_score >= min_score
+                            and structural_quality.score >= 55
+                        )
+                    else:
+                        effective_score = round(
+                            0.4 * q["placement_interview_score"] + 0.6 * structural_quality.score
+                        )
+                        keep = (
+                            structural_quality.score >= max(60, min_score - 10)
+                            and effective_score >= min_score
+                        )
+
+                    q["quality_score"] = effective_score
+                    if keep:
                         kept.append(q)
                 return kept
             else:
@@ -164,6 +242,8 @@ def generate_questions_batch(
     llm_client: ModelScopeClient,
     questions_per_chunk: int = 2,
     min_score: int = 70,
+    quality_mode: QualityMode = "llm_hybrid",
+    llm_allow_rewrite: bool = True,
 ) -> List[Dict]:
     """
     Generate questions from multiple chunks in batch.
@@ -172,7 +252,9 @@ def generate_questions_batch(
         chunks: List of chunks to process
         llm_client: Initialized ModelScopeClient
         questions_per_chunk: Number of questions per chunk
-        min_score: Minimum placement_interview_score (0-100) to keep; questions below are dropped.
+        min_score: Minimum quality score (0-100) to keep questions.
+        quality_mode: Quality filtering strategy.
+        llm_allow_rewrite: Whether LLM reviewer can rewrite borderline questions.
     
     Returns:
         Flat list of generated questions (only those with placement_interview_score >= min_score).
@@ -189,6 +271,8 @@ def generate_questions_batch(
             llm_client,
             num_questions=questions_per_chunk,
             min_score=min_score,
+            quality_mode=quality_mode,
+            llm_allow_rewrite=llm_allow_rewrite,
             prev_chunk=prev_chunk,
             next_chunk=next_chunk,
         )
@@ -203,29 +287,65 @@ def generate_questions_batch(
 
 def score_questions_batch(
     questions: List[Dict],
-    llm_client: ModelScopeClient,
+    llm_client: Optional[ModelScopeClient] = None,
     min_quality_score: int = 70,
     filter_low_scores: bool = True,
 ) -> tuple[List[Dict], List[Dict]]:
     """
-    Filter questions by placement_interview_score (when present).
-    Does not call the LLM; uses existing placement_interview_score on each question.
+    Filter questions using structural checks plus optional llm_interview_score.
+    Does not call the LLM; `llm_client` is accepted for CLI compatibility.
     Returns (accepted, rejected).
     """
+    _ = llm_client
     accepted: List[Dict] = []
     rejected: List[Dict] = []
     for q in questions:
-        score = q.get("placement_interview_score")
-        if score is None:
-            accepted.append(q)
-            continue
-        try:
-            s = int(score)
-        except (TypeError, ValueError):
-            accepted.append(q)
-            continue
-        q["quality_score"] = s
-        if filter_low_scores and s < min_quality_score:
+        placement_score = q.get("placement_interview_score")
+        if placement_score is None:
+            placement_score_int = 100
+        else:
+            try:
+                placement_score_int = int(placement_score)
+            except (TypeError, ValueError):
+                placement_score_int = 100
+
+        structural = assess_interview_quality(
+            q,
+            min_score=0,
+        )
+        q["structural_quality_score"] = structural.score
+        if structural.reasons:
+            q["structural_quality_reasons"] = structural.reasons
+
+        llm_score = q.get("llm_interview_score")
+        llm_score_int: Optional[int] = None
+        if llm_score is not None:
+            try:
+                llm_score_int = max(0, min(100, int(llm_score)))
+            except (TypeError, ValueError):
+                llm_score_int = None
+
+        if llm_score_int is not None:
+            q["quality_score"] = round(
+                0.35 * placement_score_int
+                + 0.65 * llm_score_int
+            )
+            llm_decision = str(q.get("llm_review_decision") or "").lower()
+            keep = (
+                q["quality_score"] >= min_quality_score
+                and llm_decision != "reject"
+                and structural.score >= 55
+            )
+        else:
+            q["quality_score"] = round(
+                0.4 * placement_score_int + 0.6 * structural.score
+            )
+            keep = (
+                structural.score >= 60
+                and q["quality_score"] >= min_quality_score
+            )
+
+        if filter_low_scores and not keep:
             rejected.append(q)
         else:
             accepted.append(q)

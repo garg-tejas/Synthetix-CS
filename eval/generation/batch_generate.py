@@ -175,8 +175,22 @@ def main() -> None:
     parser.add_argument(
         "--min-score",
         type=int,
-        default=70,
-        help="Minimum placement_interview_score (0-100) to keep questions (default: 70)",
+        default=85,
+        help="Minimum quality score (0-100) to keep questions (default: 85)",
+    )
+    parser.add_argument(
+        "--quality-mode",
+        choices=["deterministic", "llm_hybrid", "llm_only"],
+        default="llm_only",
+        help=(
+            "Quality filtering mode: deterministic (fast), llm_hybrid (balanced), "
+            "llm_only (strict LLM gate)"
+        ),
+    )
+    parser.add_argument(
+        "--no-llm-rewrite",
+        action="store_true",
+        help="Disable LLM rewrite of borderline questions during review",
     )
     parser.add_argument(
         "--reset",
@@ -237,8 +251,13 @@ def main() -> None:
             model_name=args.model,
             modelscope_token=args.modelscope_token,
         )
+        calls_per_chunk = 1 + (1 if args.quality_mode in {"llm_hybrid", "llm_only"} else 0)
         print(f"Using model: {llm_client.model_name} ({llm_client.base_url})")
-        print(f"Daily limit: 2000 calls (approx. {len(filtered_chunks) * args.questions_per_chunk} calls needed)")
+        print(
+            "Estimated calls: "
+            f"~{len(filtered_chunks) * calls_per_chunk} "
+            f"({calls_per_chunk} call(s) per chunk with quality_mode={args.quality_mode})"
+        )
     except Exception as e:
         print(f"Error initializing client: {e}")
         print("\nMake sure openai is installed: uv pip install openai")
@@ -248,6 +267,9 @@ def main() -> None:
 
     print("\nGenerating questions...")
     print("=" * 60)
+    print(f"Quality mode: {args.quality_mode} (min score {args.min_score})")
+    if args.quality_mode in {"llm_hybrid", "llm_only"}:
+        print(f"LLM rewrite: {'disabled' if args.no_llm_rewrite else 'enabled'}")
 
     all_questions: List[dict] = load_existing_questions(args.checkpoint) if (args.checkpoint.exists() and not args.reset) else []
     processed_this_run = 0
@@ -265,6 +287,8 @@ def main() -> None:
                 llm_client,
                 questions_per_chunk=args.questions_per_chunk,
                 min_score=args.min_score,
+                quality_mode=args.quality_mode,
+                llm_allow_rewrite=not args.no_llm_rewrite,
             )
             all_questions.extend(batch_questions)
             processed_this_run += len(batch)
