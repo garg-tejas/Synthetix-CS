@@ -5,6 +5,7 @@ import type { ApiError } from '../api/client'
 import { getStats, getTopics } from '../api/quiz'
 import type { TopicStats } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
+import { TopicScopeControls, TopicTable } from '../components/dashboard'
 import { PageHeader } from '../components/layout'
 import { Badge, Button, Card, StateMessage } from '../components/ui'
 import './dashboard.css'
@@ -96,6 +97,14 @@ export default function DashboardPage() {
     selectedTopics.length === availableTopics.length
       ? 'All topics selected'
       : `${selectedTopics.length} of ${availableTopics.length} topics selected`
+
+  const dueTopicNames = useMemo(
+    () =>
+      topics
+        .filter((topic) => topic.due_today + topic.overdue > 0)
+        .map((topic) => topic.topic),
+    [topics],
+  )
 
   const startReview = () => {
     navigate('/review', {
@@ -195,31 +204,26 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section className="dashboard-filter">
-        <h2 className="dashboard-filter__title">Topic scope</h2>
-        <div className="dashboard-filter__controls">
-          {availableTopics.map((name) => {
-            const checked = selectedTopics.includes(name)
-            return (
-              <label key={name} className="dashboard-filter__chip">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => {
-                    setSelectedTopics((prev) =>
-                      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name],
-                    )
-                  }}
-                />
-                {name}
-              </label>
-            )
-          })}
-          <Button type="button" variant="secondary" onClick={startReview}>
-            Start review
-          </Button>
-        </div>
-      </section>
+      <TopicScopeControls
+        availableTopics={availableTopics}
+        selectedTopics={selectedTopics}
+        dueTopicNames={dueTopicNames}
+        onToggleTopic={(topicName) => {
+          setSelectedTopics((prev) =>
+            prev.includes(topicName)
+              ? prev.filter((topic) => topic !== topicName)
+              : [...prev, topicName],
+          )
+        }}
+        onSelectAll={() => setSelectedTopics(availableTopics)}
+        onClearAll={() => setSelectedTopics([])}
+        onSelectDueOnly={() =>
+          setSelectedTopics(
+            dueTopicNames.length > 0 ? dueTopicNames : availableTopics,
+          )
+        }
+        onStartReview={startReview}
+      />
 
       <section className="dashboard-topics">
         <h2 className="dashboard-topics__title">By topic</h2>
@@ -242,42 +246,7 @@ export default function DashboardPage() {
           </StateMessage>
         ) : null}
 
-        {!isLoading && !error && topics.length > 0 ? (
-          <div className="dashboard-topics__table-wrap">
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ textAlign: 'left' }}>
-                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>Topic</th>
-                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>Total</th>
-                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>Learned</th>
-                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>
-                    Due today
-                  </th>
-                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>Overdue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topics.map((t) => (
-                  <tr key={t.topic}>
-                    <td style={{ padding: '10px 8px', borderBottom: '1px solid #eee' }}>
-                      <strong>{t.topic}</strong>
-                    </td>
-                    <td style={{ padding: '10px 8px', borderBottom: '1px solid #eee' }}>{t.total}</td>
-                    <td style={{ padding: '10px 8px', borderBottom: '1px solid #eee' }}>
-                      {t.learned}
-                    </td>
-                    <td style={{ padding: '10px 8px', borderBottom: '1px solid #eee' }}>
-                      {t.due_today}
-                    </td>
-                    <td style={{ padding: '10px 8px', borderBottom: '1px solid #eee' }}>
-                      {t.overdue}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
+        {!isLoading && !error && topics.length > 0 ? <TopicTable topics={topics} /> : null}
       </section>
     </div>
   )
