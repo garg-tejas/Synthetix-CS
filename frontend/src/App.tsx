@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
+import { AuthProvider } from './auth/AuthContext'
+
 function Home() {
   return (
     <div>
@@ -11,12 +13,14 @@ function Home() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="*" element={<div>404 - Not Found</div>} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="*" element={<div>404 - Not Found</div>} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 
