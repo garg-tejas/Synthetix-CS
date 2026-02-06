@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@10..48,400;10..48,500;10..48,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+  color-scheme: dark;
+
+  --font-display: 'Bricolage Grotesque', 'Trebuchet MS', sans-serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-pill: 999px;
+
+  --surface-canvas: #050b17;
+  --surface-0: rgba(10, 18, 35, 0.93);
+  --surface-1: rgba(15, 25, 46, 0.95);
+  --surface-2: rgba(23, 36, 60, 0.97);
+  --surface-inset: rgba(7, 14, 28, 0.92);
+
+  --border-soft: rgba(110, 159, 207, 0.26);
+  --border-strong: rgba(149, 194, 240, 0.4);
+
+  --text-strong: #f3f7ff;
+  --text-body: #d8e3f6;
+  --text-muted: #99abc9;
+
+  --accent-primary: #36d8ff;
+  --accent-primary-strong: #00b6e8;
+  --accent-secondary: #ffb84f;
+  --accent-secondary-strong: #ff9630;
+  --danger-strong: #ff6f7d;
+
+  --shadow-elev-1: 0 10px 30px rgba(1, 8, 23, 0.35);
+  --shadow-elev-2: 0 14px 38px rgba(2, 10, 28, 0.46);
+  --shadow-focus: 0 0 0 2px rgba(54, 216, 255, 0.28);
+
+  --gradient-canvas:
+    radial-gradient(120% 95% at 8% 4%, rgba(41, 84, 153, 0.42) 0%, rgba(41, 84, 153, 0) 58%),
+    radial-gradient(70% 80% at 88% 12%, rgba(34, 174, 212, 0.22) 0%, rgba(34, 174, 212, 0) 62%),
+    linear-gradient(165deg, #070f20 0%, #030915 55%, #02060f 100%);
+
+  --gradient-accent: linear-gradient(110deg, #36d8ff 0%, #20bded 42%, #ffb84f 100%);
+  --grain-noise:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.02) 0,
+      rgba(255, 255, 255, 0.02) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+
+  /* Legacy aliases for the current routes while C2+ migration is pending. */
+  --bg: var(--surface-canvas);
+  --bg-soft: var(--gradient-canvas);
+  --card: var(--surface-1);
+  --card-soft: var(--surface-0);
+  --border-subtle: var(--border-soft);
+  --accent: var(--accent-primary);
+  --accent-soft: rgba(54, 216, 255, 0.18);
+  --accent-strong: var(--accent-secondary-strong);
+  --text: var(--text-body);
+  --muted: var(--text-muted);
+  --danger: var(--danger-strong);
+}
