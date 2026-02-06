@@ -5,6 +5,7 @@ import datetime as dt
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.dependencies import get_current_active_user
@@ -67,7 +68,7 @@ async def get_next_quiz_cards(
     svc = QuizService()
 
     # Load cards (and their topics) for the requested topics, if any.
-    card_query = select(Card).join(Topic)
+    card_query = select(Card).join(Topic).options(selectinload(Card.topic))
     if payload.topics:
         card_query = card_query.where(Topic.name.in_(payload.topics))
     card_result = await db.execute(card_query)
@@ -127,7 +128,9 @@ async def submit_quiz_answer(
 
     # Load the card.
     card_result = await db.execute(
-        select(Card).where(Card.id == payload.card_id)
+        select(Card)
+        .options(selectinload(Card.topic))
+        .where(Card.id == payload.card_id)
     )
     card = card_result.scalar_one_or_none()
     if card is None:
@@ -203,7 +206,9 @@ async def get_quiz_stats(
     svc = QuizService()
 
     # Load all cards with topics.
-    card_result = await db.execute(select(Card).join(Topic))
+    card_result = await db.execute(
+        select(Card).join(Topic).options(selectinload(Card.topic))
+    )
     cards = card_result.scalars().unique().all()
 
     # Load all review states for this user.
