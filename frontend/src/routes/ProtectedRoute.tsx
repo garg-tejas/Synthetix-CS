@@ -7,7 +7,7 @@ export default function ProtectedRoute() {
   const location = useLocation()
 
   if (status === 'unknown') {
-    return <div>Loading…</div>
+    return <div>Loading...</div>
   }
 
   if (status !== 'authenticated') {
@@ -16,4 +16,3 @@ export default function ProtectedRoute() {
 
   return <Outlet />
 }
-

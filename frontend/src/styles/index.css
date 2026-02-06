@@ -2,3 +2,4 @@
 @import './base.css';
 @import './utilities.css';
 @import '../components/ui/ui.css';
+@import '../components/layout/layout.css';

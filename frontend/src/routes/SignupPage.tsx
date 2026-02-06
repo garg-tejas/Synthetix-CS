@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { signup } from '../api/auth'
 import type { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { PageHeader } from '../components/layout'
 
 export default function SignupPage() {
   const auth = useAuth()
@@ -37,11 +38,8 @@ export default function SignupPage() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 420, margin: '0 auto' }}>
-      <h1 style={{ marginBottom: 12 }}>Sign up</h1>
-      <p style={{ marginBottom: 16, opacity: 0.8 }}>
-        Create an account to start tracking reviews.
-      </p>
+    <div className="layout-stack layout-stack--md">
+      <PageHeader title="Sign up" subtitle="Create an account to start tracking reviews." />
 
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
         <label style={{ display: 'grid', gap: 6 }}>
@@ -79,23 +77,16 @@ export default function SignupPage() {
           />
         </label>
 
-        {error && (
-          <div style={{ color: '#b00020', fontSize: 14 }}>{error}</div>
-        )}
+        {error && <div style={{ color: '#b00020', fontSize: 14 }}>{error}</div>}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{ padding: 10, cursor: 'pointer' }}
-        >
-          {isSubmitting ? 'Creating…' : 'Create account'}
+        <button type="submit" disabled={isSubmitting} style={{ padding: 10, cursor: 'pointer' }}>
+          {isSubmitting ? 'Creating...' : 'Create account'}
         </button>
       </form>
 
-      <p style={{ marginTop: 16 }}>
+      <p>
         Already have an account? <Link to="/login">Log in</Link>
       </p>
     </div>
   )
 }
-

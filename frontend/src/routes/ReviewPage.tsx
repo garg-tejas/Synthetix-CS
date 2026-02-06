@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
-import { getNextCards, submitAnswer } from '../api/quiz'
 import type { ApiError } from '../api/client'
+import { getNextCards, submitAnswer } from '../api/quiz'
 import type { QuizAnswerResponse, QuizCard } from '../api/types'
+import { PageHeader } from '../components/layout'
 
 interface CurrentCardState {
   card: QuizCard
@@ -29,7 +30,7 @@ export default function ReviewPage() {
 
   const hasMoreAfterCurrent = useMemo(
     () => current !== null && current.index < current.total - 1,
-    [current]
+    [current],
   )
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function ReviewPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [location.state])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -108,32 +109,24 @@ export default function ReviewPage() {
   const noCards = !isLoading && !error && (!cards || cards.length === 0)
 
   return (
-    <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          marginBottom: 18,
-        }}
-      >
-        <div>
-          <h1 style={{ marginBottom: 6 }}>Review</h1>
-          {current ? (
-            <div style={{ opacity: 0.8 }}>
+    <div className="layout-stack layout-stack--lg">
+      <PageHeader
+        eyebrow="Session"
+        title="Review"
+        subtitle={
+          current ? (
+            <>
               Card {current.index + 1} of {current.total}
-            </div>
+            </>
           ) : (
-            <div style={{ opacity: 0.8 }}>No active card</div>
-          )}
-        </div>
-        <Link to="/" style={{ textDecoration: 'none', fontSize: 14 }}>
-          ← Back to dashboard
-        </Link>
-      </header>
+            'No active card'
+          )
+        }
+        backHref="/"
+        backLabel="Back to dashboard"
+      />
 
-      {isLoading && <div>Loading cards…</div>}
+      {isLoading && <div>Loading cards...</div>}
       {error && <div style={{ color: '#b00020' }}>{error}</div>}
 
       {noCards && (
@@ -149,11 +142,11 @@ export default function ReviewPage() {
         <section style={{ marginTop: 16 }}>
           <article
             style={{
-              border: '1px solid #e5e5e5',
+              border: '1px solid var(--border-subtle)',
               borderRadius: 12,
               padding: 16,
               marginBottom: 16,
-              background: '#fff',
+              background: 'var(--card)',
             }}
           >
             <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
@@ -180,7 +173,7 @@ export default function ReviewPage() {
                 disabled={isSubmitting || !!result}
                 style={{ padding: '10px 12px', cursor: 'pointer' }}
               >
-                {isSubmitting ? 'Submitting…' : 'Submit answer'}
+                {isSubmitting ? 'Submitting...' : 'Submit answer'}
               </button>
               {result && hasMoreAfterCurrent && (
                 <button
@@ -213,8 +206,7 @@ export default function ReviewPage() {
             >
               <h3 style={{ marginBottom: 8 }}>Feedback</h3>
               <div style={{ marginBottom: 8 }}>
-                <strong>Model verdict:</strong>{' '}
-                {result.verdict ?? 'n/a'}{' '}
+                <strong>Model verdict:</strong> {result.verdict ?? 'n/a'}{' '}
                 {typeof result.model_score === 'number'
                   ? `(score ${result.model_score}/5)`
                   : ''}
@@ -243,4 +235,3 @@ export default function ReviewPage() {
     </div>
   )
 }
-

@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { login } from '../api/auth'
 import type { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { PageHeader } from '../components/layout'
 
 export default function LoginPage() {
   const auth = useAuth()
@@ -15,7 +16,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const from = (location.state as any)?.from?.pathname || '/'
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/'
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,11 +39,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 420, margin: '0 auto' }}>
-      <h1 style={{ marginBottom: 12 }}>Log in</h1>
-      <p style={{ marginBottom: 16, opacity: 0.8 }}>
-        Use your email or username.
-      </p>
+    <div className="layout-stack layout-stack--md">
+      <PageHeader title="Log in" subtitle="Use your email or username." />
 
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
         <label style={{ display: 'grid', gap: 6 }}>
@@ -68,23 +66,16 @@ export default function LoginPage() {
           />
         </label>
 
-        {error && (
-          <div style={{ color: '#b00020', fontSize: 14 }}>{error}</div>
-        )}
+        {error && <div style={{ color: '#b00020', fontSize: 14 }}>{error}</div>}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{ padding: 10, cursor: 'pointer' }}
-        >
-          {isSubmitting ? 'Logging in…' : 'Log in'}
+        <button type="submit" disabled={isSubmitting} style={{ padding: 10, cursor: 'pointer' }}>
+          {isSubmitting ? 'Logging in...' : 'Log in'}
         </button>
       </form>
 
-      <p style={{ marginTop: 16 }}>
+      <p>
         No account? <Link to="/signup">Sign up</Link>
       </p>
     </div>
   )
 }
-

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { getStats, getTopics } from '../api/quiz'
 import type { ApiError } from '../api/client'
+import { getStats, getTopics } from '../api/quiz'
 import type { TopicStats } from '../api/types'
 import { useAuth } from '../auth/AuthContext'
+import { PageHeader } from '../components/layout'
 
 export default function DashboardPage() {
   const { user, clearSession } = useAuth()
@@ -50,32 +51,25 @@ export default function DashboardPage() {
   }, [topics])
 
   return (
-    <div style={{ padding: 24, maxWidth: 980, margin: '0 auto' }}>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
-          gap: 12,
-          marginBottom: 18,
-        }}
-      >
-        <div>
-          <h1 style={{ marginBottom: 6 }}>Dashboard</h1>
-          <div style={{ opacity: 0.8 }}>
-            {user ? (
-              <>
-                Signed in as <strong>{user.username}</strong>
-              </>
-            ) : (
-              'Signed in'
-            )}
-          </div>
-        </div>
-        <button onClick={clearSession} style={{ padding: 10, cursor: 'pointer' }}>
-          Log out
-        </button>
-      </header>
+    <div className="layout-stack layout-stack--lg">
+      <PageHeader
+        eyebrow="Workspace"
+        title="Dashboard"
+        subtitle={
+          user ? (
+            <>
+              Signed in as <strong>{user.username}</strong>
+            </>
+          ) : (
+            'Signed in'
+          )
+        }
+        actions={
+          <button onClick={clearSession} style={{ padding: 10, cursor: 'pointer' }}>
+            Log out
+          </button>
+        }
+      />
 
       <section
         style={{
@@ -101,7 +95,7 @@ export default function DashboardPage() {
                   checked={checked}
                   onChange={() => {
                     setSelectedTopics((prev) =>
-                      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]
+                      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name],
                     )
                   }}
                 />
@@ -129,7 +123,7 @@ export default function DashboardPage() {
       <section>
         <h2 style={{ marginBottom: 10 }}>By topic</h2>
 
-        {isLoading ? <div>Loading…</div> : null}
+        {isLoading ? <div>Loading...</div> : null}
         {error ? <div style={{ color: '#b00020' }}>{error}</div> : null}
 
         {!isLoading && !error && topics.length === 0 ? (
@@ -141,21 +135,13 @@ export default function DashboardPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ textAlign: 'left' }}>
-                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>
-                    Topic
-                  </th>
-                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>
-                    Total
-                  </th>
-                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>
-                    Learned
-                  </th>
+                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>Topic</th>
+                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>Total</th>
+                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>Learned</th>
                   <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>
                     Due today
                   </th>
-                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>
-                    Overdue
-                  </th>
+                  <th style={{ padding: '10px 8px', borderBottom: '1px solid #ddd' }}>Overdue</th>
                 </tr>
               </thead>
               <tbody>
@@ -164,9 +150,7 @@ export default function DashboardPage() {
                     <td style={{ padding: '10px 8px', borderBottom: '1px solid #eee' }}>
                       <strong>{t.topic}</strong>
                     </td>
-                    <td style={{ padding: '10px 8px', borderBottom: '1px solid #eee' }}>
-                      {t.total}
-                    </td>
+                    <td style={{ padding: '10px 8px', borderBottom: '1px solid #eee' }}>{t.total}</td>
                     <td style={{ padding: '10px 8px', borderBottom: '1px solid #eee' }}>
                       {t.learned}
                     </td>
@@ -191,10 +175,10 @@ function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div
       style={{
-        border: '1px solid #e5e5e5',
+        border: '1px solid var(--border-subtle)',
         borderRadius: 12,
         padding: 14,
-        background: '#fff',
+        background: 'var(--card)',
       }}
     >
       <div style={{ fontSize: 12, letterSpacing: 0.2, opacity: 0.7 }}>{label}</div>
@@ -202,4 +186,3 @@ function StatCard({ label, value }: { label: string; value: number }) {
     </div>
   )
 }
-
