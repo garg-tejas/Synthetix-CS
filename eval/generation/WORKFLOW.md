@@ -1,13 +1,11 @@
 # QA Generation Workflow
 
-## 6-Day Workflow (with API limits)
+## Recommended Workflow
 
-Due to API rate limits, use this 6-day workflow:
+Generation and scoring are both LLM-driven. Scoring is optimized for large
+files with sequential batched requests and checkpoint/resume.
 
-- **Days 1-3**: Generate questions for each subject (without scoring)
-- **Days 4-6**: Score questions for each subject
-
-## Day 1-3: Generate Questions (No Scoring)
+## Step 1: Generate Questions
 
 ### Day 1: Operating Systems (OS)
 
@@ -15,7 +13,8 @@ Due to API rate limits, use this 6-day workflow:
 uv run python -m eval.generation.batch_generate \
   --subject os \
   --questions-per-chunk 2 \
-  --batch-size 5
+  --batch-size 5 \
+  --quality-mode llm_only
 ```
 
 Output: `eval/generation/output/generated_questions_os.jsonl`
@@ -26,7 +25,8 @@ Output: `eval/generation/output/generated_questions_os.jsonl`
 uv run python -m eval.generation.batch_generate \
   --subject dbms \
   --questions-per-chunk 2 \
-  --batch-size 5
+  --batch-size 5 \
+  --quality-mode llm_only
 ```
 
 Output: `eval/generation/output/generated_questions_dbms.jsonl`
@@ -37,76 +37,100 @@ Output: `eval/generation/output/generated_questions_dbms.jsonl`
 uv run python -m eval.generation.batch_generate \
   --subject cn \
   --questions-per-chunk 2 \
-  --batch-size 5
+  --batch-size 5 \
+  --quality-mode llm_only
 ```
 
 Output: `eval/generation/output/generated_questions_cn.jsonl`
 
-## Day 4-6: Score Questions
+## Step 2: Score Questions (LLM-First, Batched)
 
-### Day 4: Score OS Questions
+### Score OS Questions
 
 ```bash
 uv run python -m eval.generation.score_questions \
   eval/generation/output/generated_questions_os.jsonl \
-  --min-quality-score 70
+  --model glm-4.7-flash \
+  --batch-size 20 \
+  --min-quality-score 85
 ```
 
 Output: `eval/generation/output/generated_questions_os.scored.jsonl`
 
-### Day 5: Score DBMS Questions
+### Score DBMS Questions
 
 ```bash
 uv run python -m eval.generation.score_questions \
   eval/generation/output/generated_questions_dbms.jsonl \
-  --min-quality-score 70
+  --model glm-4.7-flash \
+  --batch-size 20 \
+  --min-quality-score 85
 ```
 
 Output: `eval/generation/output/generated_questions_dbms.scored.jsonl`
 
-### Day 6: Score CN Questions
+### Score CN Questions
 
 ```bash
 uv run python -m eval.generation.score_questions \
   eval/generation/output/generated_questions_cn.jsonl \
-  --min-quality-score 70
+  --model glm-4.7-flash \
+  --batch-size 20 \
+  --min-quality-score 85
 ```
 
 Output: `eval/generation/output/generated_questions_cn.scored.jsonl`
 
-## After Scoring: Combine and Validate
+## Step 3: Validate, Deduplicate, and Import
 
-After all scoring is complete, you can:
+After scoring, you can:
 
 1. Combine all scored questions
-2. Validate and deduplicate
+2. Validate and deduplicate using LLM score threshold
 3. Import into the main questions dataset
 
 ## Quick Reference
-
-### Generate with scoring (if you have API quota)
-
-```bash
-uv run python -m eval.generation.batch_generate \
-  --subject os \
-  --score \
-  --min-quality-score 70
-```
 
 ### Score existing questions
 
 ```bash
 uv run python -m eval.generation.score_questions \
   <input_file.jsonl> \
-  --min-quality-score 70 \
+  --model glm-4.7-flash \
+  --batch-size 20 \
+  --min-quality-score 85 \
   --output <output_file.jsonl>
+```
+
+### Score 9k questions with resume
+
+```bash
+uv run python -m eval.generation.score_questions \
+  eval/generation/output/generated_questions.jsonl \
+  --model glm-4.7-flash \
+  --batch-size 20 \
+  --batch-delay 1.5 \
+  --checkpoint eval/generation/output/generated_questions.llm_checkpoint.jsonl \
+  --min-quality-score 85
+```
+
+### Validate scored questions
+
+```bash
+uv run python -m eval.generation.validate_qa \
+  <input_file.scored.jsonl> \
+  --min-interview-score 85
 ```
 
 ### Options
 
 - `--subject`: Filter by subject (`os`, `dbms`, `cn`)
 - `--questions-per-chunk`: Number of questions per chunk (default: 2)
-- `--batch-size`: Chunks per batch (default: 5, lower for rate limits)
+- `--batch-size`: Chunk batch size for generation; question batch size for scoring
 - `--max-chunks`: Limit number of chunks (for testing)
-- `--score`: Enable scoring during generation (uses 2x API calls)
-- `--min-quality-score`: Minimum score threshold (default: 70)
+- `--min-quality-score`: Minimum score threshold (default: 85)
+- `--checkpoint`: Resume scoring large files without restarting
+- `--max-batch-chars`: Cap prompt size for stable large-run scoring
+- `--min-interview-score`: Validation threshold on `quality_score` / `llm_interview_score` (default: 85)
+- `--quality-mode`: `deterministic | llm_hybrid | llm_only` (recommended: `llm_only`)
+- `--no-llm-rewrite`: Keep only direct keep/reject decisions from reviewer
