@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { getStats } from '../api/quiz'
 import type { ApiError } from '../api/client'
@@ -7,6 +8,7 @@ import { useAuth } from '../auth/AuthContext'
 
 export default function DashboardPage() {
   const { user, clearSession } = useAuth()
+  const navigate = useNavigate()
 
   const [topics, setTopics] = useState<TopicStats[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -86,15 +88,13 @@ export default function DashboardPage() {
       <section style={{ marginBottom: 18 }}>
         <button
           type="button"
-          disabled
-          title="Review flow is the next checkpoint"
+          onClick={() => navigate('/review')}
           style={{
             padding: '10px 12px',
-            cursor: 'not-allowed',
-            opacity: 0.7,
+            cursor: 'pointer',
           }}
         >
-          Start review (next checkpoint)
+          Start review
         </button>
       </section>
 
