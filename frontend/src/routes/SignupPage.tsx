@@ -130,7 +130,7 @@ export default function SignupPage() {
       })
       auth.setTokenPair(tokens)
       await auth.refreshUser()
-      navigate('/', { replace: true })
+      navigate('/dashboard', { replace: true })
     } catch (err) {
       const apiErr = err as ApiError
       setError(apiErr.detail || 'Signup failed')

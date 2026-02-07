@@ -33,7 +33,9 @@ export default function LoginPage() {
     password: false,
   })
 
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/'
+  const from =
+    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ||
+    '/dashboard'
   const normalizedIdentity = emailOrUsername.trim()
 
   const fieldErrors = useMemo(() => {

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import AppShell from './components/layout/AppShell'
 import DashboardPage from './routes/DashboardPage'
+import LandingPage from './routes/LandingPage'
 import ReviewPage from './routes/ReviewPage'
 import LoginPage from './routes/LoginPage'
 import SignupPage from './routes/SignupPage'
@@ -13,9 +14,12 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route element={<AppShell mode="workspace" width="wide" />}>
+            <Route path="/" element={<LandingPage />} />
+          </Route>
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell mode="workspace" width="content" />}>
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/review" element={<ReviewPage />} />
             </Route>
           </Route>

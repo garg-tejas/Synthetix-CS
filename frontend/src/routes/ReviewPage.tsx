@@ -139,7 +139,7 @@ export default function ReviewPage() {
             ? `Card ${current.index + 1} of ${current.total}`
             : 'No active card'
         }
-        backHref="/"
+        backHref="/dashboard"
         backLabel="Back to dashboard"
       />
 
@@ -191,7 +191,7 @@ export default function ReviewPage() {
             Nice work. You can return to the dashboard and start a new session later.
           </StateMessage>
           <div className="review-empty__actions">
-            <Button type="button" onClick={() => navigate('/')}>
+            <Button type="button" onClick={() => navigate('/dashboard')}>
               Back to dashboard
             </Button>
           </div>
@@ -261,8 +261,8 @@ export default function ReviewPage() {
           result={result}
           hasMoreAfterCurrent={hasMoreAfterCurrent}
           onNextCard={goToNextCard}
-          onFinishSession={() => navigate('/')}
-          onBackToDashboard={() => navigate('/')}
+          onFinishSession={() => navigate('/dashboard')}
+          onBackToDashboard={() => navigate('/dashboard')}
         />
       ) : null}
     </div>
