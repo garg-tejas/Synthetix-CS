@@ -14,7 +14,14 @@ LLM-first pipeline, and serves them through a spaced-repetition quiz app with an
 - Auth API:
   `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`
 - Quiz API (PostgreSQL-backed):
-  `GET /api/quiz/topics`, `POST /api/quiz/next`, `POST /api/quiz/answer`, `GET /api/quiz/stats`
+  `GET /api/quiz/topics`, `GET /api/quiz/stats`,
+  `POST /api/quiz/sessions/start`,
+  `POST /api/quiz/sessions/{session_id}/answer`,
+  `POST /api/quiz/sessions/{session_id}/finish`
+- Learning path graph scripts:
+  `python -m scripts.build_topic_dependency_graph`,
+  `python -m scripts.sync_topic_dependency_graph`,
+  `python -m scripts.check_learning_path_graph`
 - Offline QA pipeline:
   generate -> LLM score (`eval.generation.score_questions`) ->
   validate (`eval.generation.validate_qa`) -> seed cards (`scripts.seed_cards`)

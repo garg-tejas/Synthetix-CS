@@ -138,6 +138,36 @@ This will:
 - Ensure `topics` rows exist for `os`, `cn`, and `dbms`
 - Insert one `Card` per validated question, linked to the appropriate topic
 
+### 8.5 Build canonical learning-path dependency graph
+
+Build graph artifacts from chunks (LLM-assisted two-pass extraction/validation):
+
+```bash
+uv run python -m scripts.build_topic_dependency_graph --subject os
+uv run python -m scripts.build_topic_dependency_graph --subject dbms
+uv run python -m scripts.build_topic_dependency_graph --subject cn
+```
+
+This writes:
+
+- `eval/generation/output/topic_graph.<subject>.candidates.json`
+- `eval/generation/output/topic_graph.<subject>.validated.json`
+- `eval/generation/output/topic_graph.validated.json`
+
+Sync validated graph into DB:
+
+```bash
+uv run python -m scripts.sync_topic_dependency_graph --subject os --replace-subject
+uv run python -m scripts.sync_topic_dependency_graph --subject dbms --replace-subject
+uv run python -m scripts.sync_topic_dependency_graph --subject cn --replace-subject
+```
+
+Verify graph coverage:
+
+```bash
+uv run python -m scripts.check_learning_path_graph
+```
+
 ### 9. Run the API
 
 Start the FastAPI app:
@@ -197,8 +227,9 @@ Open the app at `http://localhost:5173`.
 All quiz endpoints require a Bearer token from the auth routes.
 
 - `GET /api/quiz/topics` - list topics and total card counts
-- `POST /api/quiz/next` - fetch the next batch of cards to review
-- `POST /api/quiz/answer` - submit a quality rating for a card and update the schedule
+- `POST /api/quiz/sessions/start` - start a review session and return scoped path + first card
+- `POST /api/quiz/sessions/{session_id}/answer` - submit answer for current session card
+- `POST /api/quiz/sessions/{session_id}/finish` - finish session and close server-side state
 - `GET /api/quiz/stats` - per-topic stats (total, learned, due today, overdue)
 
 These flows together give you a live, seeded skill-decay tracker on top of the RAG system.
