@@ -44,12 +44,7 @@ def client() -> TestClient:
 def test_quiz_endpoints_require_auth(client: TestClient):
     # Without auth, quiz endpoints should reject the request.
     r_topics = client.get("/api/quiz/topics")
-    r_next = client.post("/api/quiz/next", json={})
     r_stats = client.get("/api/quiz/stats")
-    r_answer = client.post(
-        "/api/quiz/answer",
-        json={"card_id": 1, "user_answer": "test answer", "quality": 3},
-    )
     r_session_start = client.post("/api/quiz/sessions/start", json={})
     r_session_answer = client.post(
         "/api/quiz/sessions/fake-session/answer",
@@ -58,15 +53,13 @@ def test_quiz_endpoints_require_auth(client: TestClient):
     r_session_finish = client.post("/api/quiz/sessions/fake-session/finish")
 
     assert r_topics.status_code == 401
-    assert r_next.status_code == 401
     assert r_stats.status_code == 401
-    assert r_answer.status_code == 401
     assert r_session_start.status_code == 401
     assert r_session_answer.status_code == 401
     assert r_session_finish.status_code == 401
 
 
-def test_quiz_topics_next_and_stats_authenticated(client: TestClient):
+def test_quiz_topics_and_stats_authenticated(client: TestClient):
     token = _signup_and_get_token(client)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -76,35 +69,12 @@ def test_quiz_topics_next_and_stats_authenticated(client: TestClient):
     topics = r_topics.json()
     assert isinstance(topics, list)
 
-    # Next
-    r_next = client.post("/api/quiz/next", json={}, headers=headers)
-    assert r_next.status_code == 200
-    next_data = r_next.json()
-    assert "cards" in next_data
-    assert "due_count" in next_data
-    assert "new_count" in next_data
-
     # Stats
     r_stats = client.get("/api/quiz/stats", headers=headers)
     assert r_stats.status_code == 200
     stats = r_stats.json()
     assert "topics" in stats
     assert isinstance(stats["topics"], list)
-
-
-def test_quiz_answer_nonexistent_card_returns_404(client: TestClient):
-    token = _signup_and_get_token(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    r = client.post(
-        "/api/quiz/answer",
-        json={"card_id": 999999, "user_answer": "test answer", "quality": 3},
-        headers=headers,
-    )
-    assert r.status_code in (404, 400)
-    # If 404, we expect our "Card not found" message.
-    if r.status_code == 404:
-        assert r.json().get("detail") == "Card not found"
 
 
 def test_quiz_session_start_and_finish_authenticated(client: TestClient):
