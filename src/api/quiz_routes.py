@@ -13,14 +13,23 @@ from src.db.models import Card, ReviewAttempt, ReviewState, Topic, User
 from src.db.session import get_db
 from src.skills.quiz_service import QuizService
 from src.skills.grader import grade_answer
+from src.skills.path_planner import PathNode
+from src.skills.session_service import QuizSessionService, QuizSessionState
 from src.skills.swot import refresh_user_swot
 from src.skills.schemas import (
+    LearningPathNode,
     QuizAnswerRequest,
     QuizAnswerResponse,
     QuizCard,
     QuizNextRequest,
     QuizNextResponse,
+    QuizSessionAnswerRequest,
+    QuizSessionAnswerResponse,
+    QuizSessionFinishResponse,
+    QuizSessionStartRequest,
+    QuizSessionStartResponse,
     QuizStatsResponse,
+    SessionProgress,
     TopicStats,
 )
 
@@ -59,6 +68,46 @@ async def _refresh_swot_snapshot(
         review_attempts=review_attempts,
     )
     await db.commit()
+
+
+def _quiz_sessions_store(request: Request) -> dict[str, QuizSessionState]:
+    store = getattr(request.app.state, "quiz_sessions", None)
+    if store is None:
+        store = {}
+        request.app.state.quiz_sessions = store
+    return store
+
+
+def _to_quiz_card(card: Card) -> QuizCard:
+    return QuizCard(
+        card_id=card.id,
+        topic=card.topic.name if card.topic else "",  # type: ignore[union-attr]
+        question=card.question,
+        difficulty=card.difficulty,
+        question_type=card.question_type,
+    )
+
+
+def _to_path_nodes(nodes: list[PathNode]) -> list[LearningPathNode]:
+    return [
+        LearningPathNode(
+            subject=node.subject,
+            topic_key=node.topic_key,
+            display_name=node.display_name,
+            mastery_score=node.mastery_score,
+            swot_bucket=node.swot_bucket,
+            priority_score=node.priority_score,
+        )
+        for node in nodes
+    ]
+
+
+def _progress(state: QuizSessionState) -> SessionProgress:
+    return SessionProgress(
+        current_index=state.cursor,
+        total=state.total,
+        completed=state.completed,
+    )
 
 
 @router.get("/topics", response_model=List[TopicStats])
@@ -293,4 +342,90 @@ async def get_quiz_stats(
     ]
 
     return QuizStatsResponse(topics=topics_stats)
+
+
+@router.post("/sessions/start", response_model=QuizSessionStartResponse)
+async def start_quiz_session(
+    payload: QuizSessionStartRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    request: Request,
+) -> QuizSessionStartResponse:
+    session_service = QuizSessionService(
+        chunks_by_id=getattr(request.app.state, "chunks_by_id", {}) or {}
+    )
+    state = await session_service.start_session(
+        db=db,
+        user_id=current_user.id,
+        limit=payload.limit,
+        topics=payload.topics,
+        subject=payload.subject,
+    )
+    _quiz_sessions_store(request)[state.session_id] = state
+
+    current_card = state.current_card()
+    return QuizSessionStartResponse(
+        session_id=state.session_id,
+        current_card=_to_quiz_card(current_card) if current_card else None,
+        progress=_progress(state),
+        path=_to_path_nodes(state.path_nodes),
+    )
+
+
+@router.post("/sessions/{session_id}/answer", response_model=QuizSessionAnswerResponse)
+async def answer_quiz_session(
+    session_id: str,
+    payload: QuizSessionAnswerRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    request: Request,
+) -> QuizSessionAnswerResponse:
+    store = _quiz_sessions_store(request)
+    state = store.get(session_id)
+    if state is None or state.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    session_service = QuizSessionService(
+        chunks_by_id=getattr(request.app.state, "chunks_by_id", {}) or {}
+    )
+    try:
+        outcome = await session_service.submit_current_answer(
+            db=db,
+            state=state,
+            card_id=payload.card_id,
+            user_answer=payload.user_answer,
+            response_time_ms=payload.response_time_ms,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    return QuizSessionAnswerResponse(
+        answer=outcome.answer,
+        explanation=outcome.explanation,
+        source_chunk_id=outcome.source_chunk_id,
+        model_score=outcome.grade.score_0_5,
+        verdict=outcome.grade.verdict,
+        next_due_at=(
+            outcome.updated_state.due_at.isoformat()
+            if outcome.updated_state.due_at
+            else None
+        ),
+        interval_days=outcome.updated_state.interval_days,
+        next_card=_to_quiz_card(outcome.next_card) if outcome.next_card else None,
+        progress=_progress(state),
+    )
+
+
+@router.post("/sessions/{session_id}/finish", response_model=QuizSessionFinishResponse)
+async def finish_quiz_session(
+    session_id: str,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    request: Request,
+) -> QuizSessionFinishResponse:
+    store = _quiz_sessions_store(request)
+    state = store.get(session_id)
+    if state is None or state.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    store.pop(session_id, None)
+    return QuizSessionFinishResponse(status="finished", session_id=session_id)
 

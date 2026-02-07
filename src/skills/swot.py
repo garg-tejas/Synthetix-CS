@@ -99,7 +99,11 @@ class MasterySWOTEngine:
                 continue
             states_by_topic.setdefault(topic, []).append(state)
 
-        active_topics = set(attempts_by_topic.keys()) | set(states_by_topic.keys())
+        active_topics = (
+            set(attempts_by_topic.keys())
+            | set(states_by_topic.keys())
+            | set(topic_for_card.values())
+        )
         mastery_out: dict[tuple[str, str], MasterySnapshot] = {}
         swot_out: dict[tuple[str, str], SWOTSnapshot] = {}
 

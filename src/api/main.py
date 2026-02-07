@@ -24,8 +24,10 @@ async def lifespan(app: FastAPI):
     app.state.chunks_by_id = chunks_by_id or {}
     app.state.chunks_loaded = chunks_loaded
     app.state.sessions = {}
+    app.state.quiz_sessions = {}
     yield
     app.state.sessions.clear()
+    app.state.quiz_sessions.clear()
 
 
 app = FastAPI(
