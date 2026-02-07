@@ -113,8 +113,19 @@ export default function DashboardPage() {
   )
 
   const startReview = useCallback(() => {
-    navigate('/review', {
-      state: { topics: selectedTopics.length ? selectedTopics : null },
+    navigate('/review/setup', {
+      state: {
+        topics: selectedTopics.length ? selectedTopics : null,
+      },
+    })
+  }, [navigate, selectedTopics])
+
+  const previewLearningPath = useCallback(() => {
+    navigate('/review/path', {
+      state: {
+        topics: selectedTopics.length ? selectedTopics : null,
+        limit: 10,
+      },
     })
   }, [navigate, selectedTopics])
 
@@ -199,6 +210,9 @@ export default function DashboardPage() {
           <div className="dashboard-hero__actions">
             <Button type="button" size="lg" onClick={startReview}>
               Start review session
+            </Button>
+            <Button type="button" variant="secondary" onClick={previewLearningPath}>
+              Preview learning path
             </Button>
             <p className="dashboard-hero__hint">{selectionSummary}</p>
           </div>

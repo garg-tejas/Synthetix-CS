@@ -93,6 +93,9 @@ def test_quiz_session_start_and_finish_authenticated(client: TestClient):
     assert "progress" in start_data
     assert "path" in start_data
     assert isinstance(start_data["path"], list)
+    if start_data["path"]:
+        assert "prerequisite_topic_keys" in start_data["path"][0]
+        assert isinstance(start_data["path"][0]["prerequisite_topic_keys"], list)
     assert start_data["progress"]["total"] >= 0
 
     session_id = start_data["session_id"]

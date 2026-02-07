@@ -96,6 +96,7 @@ def _to_path_nodes(nodes: list[PathNode]) -> list[LearningPathNode]:
             mastery_score=node.mastery_score,
             swot_bucket=node.swot_bucket,
             priority_score=node.priority_score,
+            prerequisite_topic_keys=node.prerequisite_topic_keys,
         )
         for node in nodes
     ]

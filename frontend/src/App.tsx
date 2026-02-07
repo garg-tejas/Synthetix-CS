@@ -5,6 +5,9 @@ import AppShell from './components/layout/AppShell'
 import DashboardPage from './routes/DashboardPage'
 import LandingPage from './routes/LandingPage'
 import ReviewPage from './routes/ReviewPage'
+import LearningPathPage from './routes/LearningPathPage'
+import ReviewSetupPage from './routes/ReviewSetupPage'
+import ReviewSummaryPage from './routes/ReviewSummaryPage'
 import LoginPage from './routes/LoginPage'
 import SignupPage from './routes/SignupPage'
 import ProtectedRoute from './routes/ProtectedRoute'
@@ -20,7 +23,10 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell mode="workspace" width="content" />}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/review/setup" element={<ReviewSetupPage />} />
+              <Route path="/review/path" element={<LearningPathPage />} />
               <Route path="/review" element={<ReviewPage />} />
+              <Route path="/review/summary" element={<ReviewSummaryPage />} />
             </Route>
           </Route>
           <Route element={<AppShell mode="auth" width="content" />}>

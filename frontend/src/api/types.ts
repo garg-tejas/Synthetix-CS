@@ -49,6 +49,7 @@ export interface LearningPathNode {
   mastery_score: number
   swot_bucket: string
   priority_score: number
+  prerequisite_topic_keys: string[]
 }
 
 export interface SessionProgress {

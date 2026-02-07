@@ -1,0 +1,96 @@
+.review-summary {
+  padding-bottom: var(--space-6);
+}
+
+.review-summary__hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.review-summary__hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--grain-noise);
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.review-summary__hero-progress .ui-progress__track {
+  height: 0.58rem;
+}
+
+.review-summary__hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.review-summary__hero-metrics article {
+  border: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.review-summary__hero-metrics span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.review-summary__hero-metrics strong {
+  font-family: var(--font-display);
+  color: var(--text-strong);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.review-summary__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.review-summary__scope,
+.review-summary__next {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.review-summary__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.review-summary__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@media (max-width: 960px) {
+  .review-summary__hero-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-summary__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .review-summary__hero-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .review-summary__actions > * {
+    width: 100%;
+  }
+}

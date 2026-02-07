@@ -12,7 +12,28 @@ import Card from '../components/ui/Card'
 import ProgressBar from '../components/ui/ProgressBar'
 import StateMessage from '../components/ui/StateMessage'
 import Textarea from '../components/ui/Textarea'
+import type { ReviewSessionScopeState, ReviewSummaryState } from './reviewFlow'
 import './review.css'
+
+type VerdictBucket = 'correct' | 'partially_correct' | 'incorrect'
+
+interface SessionAttemptSnapshot {
+  score: number | null
+  verdict: VerdictBucket
+  shouldRemediate: boolean
+  topic: string
+}
+
+function normalizeVerdictBucket(value: string | null | undefined): VerdictBucket {
+  const normalized = (value || '').trim().toLowerCase()
+  if (normalized.includes('partial')) return 'partially_correct'
+  if (normalized.includes('correct')) return 'correct'
+  return 'incorrect'
+}
+
+function clampLimit(value: number): number {
+  return Math.max(1, Math.min(100, Math.round(value)))
+}
 
 export default function ReviewPage() {
   const navigate = useNavigate()
@@ -22,6 +43,7 @@ export default function ReviewPage() {
   const [currentCard, setCurrentCard] = useState<QuizCard | null>(null)
   const [progress, setProgress] = useState<SessionProgress | null>(null)
   const [displayedIndex, setDisplayedIndex] = useState(0)
+  const [sessionAttempts, setSessionAttempts] = useState<SessionAttemptSnapshot[]>([])
 
   const [userAnswer, setUserAnswer] = useState('')
   const [attemptStartedAt, setAttemptStartedAt] = useState<number | null>(null)
@@ -37,6 +59,36 @@ export default function ReviewPage() {
   useEffect(() => {
     sessionIdRef.current = sessionId
   }, [sessionId])
+
+  const buildSummaryState = useCallback((): ReviewSummaryState => {
+    const correctCount = sessionAttempts.filter(
+      (attempt) => attempt.verdict === 'correct',
+    ).length
+    const partialCount = sessionAttempts.filter(
+      (attempt) => attempt.verdict === 'partially_correct',
+    ).length
+    const incorrectCount = sessionAttempts.filter(
+      (attempt) => attempt.verdict === 'incorrect',
+    ).length
+    const remediationCount = sessionAttempts.filter((attempt) => attempt.shouldRemediate).length
+    const scoredAttempts = sessionAttempts
+      .map((attempt) => attempt.score)
+      .filter((score): score is number => typeof score === 'number')
+
+    return {
+      answeredCount: sessionAttempts.length,
+      totalCards: progress?.total ?? sessionAttempts.length,
+      averageScore:
+        scoredAttempts.length > 0
+          ? scoredAttempts.reduce((sum, score) => sum + score, 0) / scoredAttempts.length
+          : null,
+      correctCount,
+      partialCount,
+      incorrectCount,
+      remediationCount,
+      topics: Array.from(new Set(sessionAttempts.map((attempt) => attempt.topic).filter(Boolean))),
+    }
+  }, [progress?.total, sessionAttempts])
 
   const finishAndNavigateBack = useCallback(() => {
     const activeSessionId = sessionIdRef.current
@@ -54,6 +106,23 @@ export default function ReviewPage() {
       })
   }, [navigate])
 
+  const finishAndNavigateSummary = useCallback(() => {
+    const summaryState = buildSummaryState()
+    const activeSessionId = sessionIdRef.current
+    if (!activeSessionId || sessionClosedRef.current) {
+      navigate('/review/summary', { state: summaryState })
+      return
+    }
+    sessionClosedRef.current = true
+    void finishQuizSession(activeSessionId)
+      .catch(() => undefined)
+      .finally(() => {
+        sessionIdRef.current = null
+        setSessionId(null)
+        navigate('/review/summary', { state: summaryState })
+      })
+  }, [buildSummaryState, navigate])
+
   useEffect(() => {
     let cancelled = false
     const run = async () => {
@@ -61,13 +130,13 @@ export default function ReviewPage() {
       setError(null)
       setResult(null)
       setUserAnswer('')
+      setSessionAttempts([])
       try {
-        const state = location.state as
-          | { topics?: string[] | null; subject?: string | null }
-          | null
+        const state = location.state as ReviewSessionScopeState | null
         const topics = state?.topics && state.topics.length ? state.topics : undefined
         const subject = state?.subject || undefined
-        const data = await startQuizSession({ limit: 10, topics, subject })
+        const requestedLimit = typeof state?.limit === 'number' ? clampLimit(state.limit) : 10
+        const data = await startQuizSession({ limit: requestedLimit, topics, subject })
         if (cancelled) return
         sessionClosedRef.current = false
         setSessionId(data.session_id)
@@ -121,8 +190,21 @@ export default function ReviewPage() {
         user_answer: trimmedAnswer,
         response_time_ms: responseTimeMs,
       })
+      const verdict = normalizeVerdictBucket(res.verdict)
       setResult(res)
       setProgress(res.progress)
+      setSessionAttempts((previous) => [
+        ...previous,
+        {
+          score: typeof res.model_score === 'number' ? res.model_score : null,
+          verdict,
+          shouldRemediate:
+            typeof res.should_remediate === 'boolean'
+              ? res.should_remediate
+              : verdict !== 'correct',
+          topic: currentCard.topic,
+        },
+      ])
     } catch (err) {
       const apiErr = err as ApiError
       setError(apiErr.detail || 'Failed to submit answer')
@@ -292,7 +374,7 @@ export default function ReviewPage() {
           result={result}
           hasMoreAfterCurrent={hasMoreAfterCurrent}
           onNextCard={goToNextCard}
-          onFinishSession={finishAndNavigateBack}
+          onFinishSession={finishAndNavigateSummary}
           onBackToDashboard={finishAndNavigateBack}
         />
       ) : null}

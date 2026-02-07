@@ -40,6 +40,7 @@ class LearningPathNode(BaseModel):
     mastery_score: float
     swot_bucket: str
     priority_score: float
+    prerequisite_topic_keys: List[str] = Field(default_factory=list)
 
 
 class SessionProgress(BaseModel):

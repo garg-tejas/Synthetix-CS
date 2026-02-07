@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from sqlalchemy import and_, select
@@ -17,6 +17,7 @@ class PathNode:
     mastery_score: float
     swot_bucket: str
     priority_score: float
+    prerequisite_topic_keys: list[str] = field(default_factory=list)
 
 
 def compute_priority_score(*, mastery_score: float, swot_bucket: str) -> float:
@@ -152,12 +153,16 @@ class LearningPathPlanner:
             )
 
         prerequisites: List[Tuple[Tuple[str, str], Tuple[str, str]]] = []
+        prereq_keys_by_topic: Dict[Tuple[str, str], set[str]] = {}
         for edge in prereq_rows:
-            prerequisites.append(
-                (
-                    (edge.subject, edge.topic_key),
-                    (edge.subject, edge.prerequisite_key),
-                )
-            )
+            topic = (edge.subject, edge.topic_key)
+            prerequisite = (edge.subject, edge.prerequisite_key)
+            prerequisites.append((topic, prerequisite))
+            if topic not in nodes or prerequisite not in nodes:
+                continue
+            prereq_keys_by_topic.setdefault(topic, set()).add(edge.prerequisite_key)
+
+        for key, node in nodes.items():
+            node.prerequisite_topic_keys = sorted(prereq_keys_by_topic.get(key, set()))
 
         return self.order_nodes(nodes=nodes, prerequisites=prerequisites)
