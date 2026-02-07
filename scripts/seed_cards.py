@@ -15,12 +15,38 @@ import asyncio
 import json
 from collections import Counter
 from pathlib import Path
+import re
 from typing import Dict, List
 
 from sqlalchemy import select
 
 from src.db.models import Card, Topic
 from src.db.session import AsyncSessionLocal
+
+
+_NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _slugify(text: str, *, max_len: int = 80) -> str:
+    cleaned = _NON_ALNUM_RE.sub("-", text.strip().lower()).strip("-")
+    if not cleaned:
+        return "general"
+    if len(cleaned) <= max_len:
+        return cleaned
+    return cleaned[:max_len].rstrip("-")
+
+
+def infer_topic_key(question: Dict) -> str:
+    explicit = question.get("topic_key")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip().lower()
+
+    subject = str(question.get("source_subject") or "unknown").strip().lower()
+    header = str(question.get("source_header") or "").strip()
+    if header:
+        tail = header.split(">")[-1].strip()
+        return f"{subject}:{_slugify(tail)}"
+    return f"{subject}:core"
 
 
 def load_questions(path: Path) -> List[Dict]:
@@ -148,6 +174,14 @@ async def apply_seed(questions: List[Dict]) -> None:
                 question_type=q.get("question_type"),
                 source_chunk_id=source_chunk_id,
                 tags=None,
+                topic_key=infer_topic_key(q),
+                generation_origin="seed",
+                provenance_json={
+                    "source": "validated_seed",
+                    "source_header": q.get("source_header"),
+                    "source_subject": q.get("source_subject"),
+                    "quality_score": q.get("quality_score"),
+                },
             )
             session.add(card)
             inserted += 1
@@ -200,4 +234,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

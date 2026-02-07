@@ -6,8 +6,10 @@ from typing import List, Optional
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
+    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -65,6 +67,14 @@ class Card(Base):
 
     # Optional comma-separated tags for future filtering
     tags: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    topic_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    variant_of_card_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("cards.id"),
+        nullable=True,
+        index=True,
+    )
+    generation_origin: Mapped[str] = mapped_column(String(32), nullable=False, default="seed")
+    provenance_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True),
@@ -74,7 +84,23 @@ class Card(Base):
 
     topic: Mapped["Topic"] = relationship(back_populates="cards")
     review_states: Mapped[List["ReviewState"]] = relationship(back_populates="card")
-    review_attempts: Mapped[List["ReviewAttempt"]] = relationship(back_populates="card")
+    review_attempts: Mapped[List["ReviewAttempt"]] = relationship(
+        back_populates="card",
+        foreign_keys="ReviewAttempt.card_id",
+    )
+    served_review_attempts: Mapped[List["ReviewAttempt"]] = relationship(
+        back_populates="served_card",
+        foreign_keys="ReviewAttempt.served_card_id",
+    )
+    variant_of: Mapped[Optional["Card"]] = relationship(
+        "Card",
+        remote_side=[id],
+        back_populates="variants",
+    )
+    variants: Mapped[List["Card"]] = relationship(
+        "Card",
+        back_populates="variant_of",
+    )
 
 
 class ReviewState(Base):
@@ -107,6 +133,11 @@ class ReviewAttempt(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     card_id: Mapped[int] = mapped_column(ForeignKey("cards.id"), nullable=False, index=True)
+    served_card_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("cards.id"),
+        nullable=True,
+        index=True,
+    )
 
     attempted_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True),
@@ -117,5 +148,132 @@ class ReviewAttempt(Base):
     response_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="review_attempts")
-    card: Mapped["Card"] = relationship(back_populates="review_attempts")
+    card: Mapped["Card"] = relationship(
+        back_populates="review_attempts",
+        foreign_keys=[card_id],
+    )
+    served_card: Mapped[Optional["Card"]] = relationship(
+        back_populates="served_review_attempts",
+        foreign_keys=[served_card_id],
+    )
 
+
+class TopicTaxonomyNode(Base):
+    __tablename__ = "topic_taxonomy_nodes"
+    __table_args__ = (
+        UniqueConstraint("subject", "topic_key", name="uq_topic_taxonomy_subject_key"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    subject: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    topic_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    display_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    parent_topic_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, default="deterministic")
+    metadata_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=dt.datetime.utcnow,
+        nullable=False,
+    )
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=dt.datetime.utcnow,
+        onupdate=dt.datetime.utcnow,
+        nullable=False,
+    )
+
+
+class TopicPrerequisite(Base):
+    __tablename__ = "topic_prerequisites"
+    __table_args__ = (
+        UniqueConstraint(
+            "subject",
+            "topic_key",
+            "prerequisite_key",
+            name="uq_topic_prereq_subject_topic_prereq",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    subject: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    topic_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    prerequisite_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, default="deterministic")
+    evidence_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=dt.datetime.utcnow,
+        nullable=False,
+    )
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=dt.datetime.utcnow,
+        onupdate=dt.datetime.utcnow,
+        nullable=False,
+    )
+
+
+class UserTopicMastery(Base):
+    __tablename__ = "user_topic_mastery"
+    __table_args__ = (
+        UniqueConstraint("user_id", "subject", "topic_key", name="uq_user_topic_mastery"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    subject: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    topic_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    avg_quality: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    due_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    overdue_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    lapse_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    recent_trend: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    mastery_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    last_reviewed_at: Mapped[Optional[dt.datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=dt.datetime.utcnow,
+        nullable=False,
+    )
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=dt.datetime.utcnow,
+        onupdate=dt.datetime.utcnow,
+        nullable=False,
+    )
+
+
+class UserTopicSWOT(Base):
+    __tablename__ = "user_topic_swot"
+    __table_args__ = (
+        UniqueConstraint("user_id", "subject", "topic_key", name="uq_user_topic_swot"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    subject: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    topic_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    strength_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    weakness_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    opportunity_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    threat_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    primary_bucket: Mapped[str] = mapped_column(String(16), nullable=False, default="opportunity")
+    rationale: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, default="rule_hybrid")
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=dt.datetime.utcnow,
+        nullable=False,
+    )
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=dt.datetime.utcnow,
+        onupdate=dt.datetime.utcnow,
+        nullable=False,
+    )
