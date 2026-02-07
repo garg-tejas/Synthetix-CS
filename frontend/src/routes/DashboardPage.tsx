@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import type { ApiError } from '../api/client'
@@ -25,33 +25,35 @@ export default function DashboardPage() {
   const [availableTopics, setAvailableTopics] = useState<string[]>([])
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    const run = async () => {
-      setIsLoading(true)
-      setError(null)
-      try {
-        const [stats, topicsList] = await Promise.all([getStats(), getTopics()])
-        if (cancelled) return
-        setTopics(stats.topics || [])
-        const names = (topicsList || []).map((t) => t.topic).sort()
-        setAvailableTopics(names)
-        setSelectedTopics(names)
-      } catch (err) {
-        if (cancelled) return
-        const apiErr = err as ApiError
-        setError(apiErr.detail || 'Failed to load stats')
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
-    run()
-    return () => {
-      cancelled = true
+  const loadDashboard = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const [stats, topicsList] = await Promise.all([getStats(), getTopics()])
+      setTopics(stats.topics || [])
+      const names = (topicsList || []).map((t) => t.topic).sort()
+      setAvailableTopics(names)
+      setSelectedTopics((prev) => (prev.length > 0 ? prev : names))
+    } catch (err) {
+      const apiErr = err as ApiError
+      setError(apiErr.detail || 'Failed to load stats')
+    } finally {
+      setIsLoading(false)
+      setHasLoadedOnce(true)
     }
   }, [])
+
+  useEffect(() => {
+    void loadDashboard()
+  }, [loadDashboard])
+
+  const hasAnyData = topics.length > 0 || availableTopics.length > 0
+  const isInitialLoading = isLoading && !hasLoadedOnce
+  const isRefreshing = isLoading && hasLoadedOnce
+  const hasBlockingError = !isLoading && !!error && !hasAnyData
 
   const totals = useMemo(() => {
     const totalCards = topics.reduce((acc, t) => acc + (t.total || 0), 0)
@@ -106,10 +108,48 @@ export default function DashboardPage() {
     [topics],
   )
 
-  const startReview = () => {
+  const startReview = useCallback(() => {
     navigate('/review', {
       state: { topics: selectedTopics.length ? selectedTopics : null },
     })
+  }, [navigate, selectedTopics])
+
+  if (isInitialLoading) {
+    return (
+      <div className="dashboard layout-stack layout-stack--lg">
+        <PageHeader
+          eyebrow="Signal Lab"
+          title="Dashboard"
+          subtitle="Preparing your review workspace..."
+        />
+        <DashboardLoadingState />
+      </div>
+    )
+  }
+
+  if (hasBlockingError) {
+    return (
+      <div className="dashboard layout-stack layout-stack--lg">
+        <PageHeader
+          eyebrow="Signal Lab"
+          title="Dashboard"
+          subtitle="We could not load your study workspace."
+        />
+        <Card className="dashboard-blocking-error" tone="default" padding="lg">
+          <StateMessage title="Connection issue" tone="danger">
+            {error}
+          </StateMessage>
+          <div className="dashboard-blocking-error__actions">
+            <Button type="button" onClick={() => void loadDashboard()}>
+              Retry loading
+            </Button>
+            <Button type="button" variant="ghost" onClick={clearSession}>
+              Log out
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -119,6 +159,12 @@ export default function DashboardPage() {
         title="Dashboard"
         subtitle="Monitor your study rhythm and launch the next review sprint."
       />
+
+      {isRefreshing ? (
+        <p className="dashboard-status-line" role="status" aria-live="polite">
+          Refreshing dashboard metrics...
+        </p>
+      ) : null}
 
       <section className="dashboard-hero">
         <Card
@@ -160,7 +206,21 @@ export default function DashboardPage() {
           kicker="Account overview"
           title={user?.username ?? 'Signed in'}
           subtitle={user?.email ?? 'Authenticated session'}
-          actions={<Button variant="ghost" size="sm" onClick={clearSession}>Log out</Button>}
+          actions={
+            <div className="dashboard-profile__actions">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void loadDashboard()}
+                disabled={isRefreshing}
+              >
+                Refresh
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearSession}>
+                Log out
+              </Button>
+            </div>
+          }
         >
           <dl className="dashboard-summary">
             <div className="dashboard-summary__item">
@@ -208,6 +268,7 @@ export default function DashboardPage() {
         availableTopics={availableTopics}
         selectedTopics={selectedTopics}
         dueTopicNames={dueTopicNames}
+        isBusy={isRefreshing}
         onToggleTopic={(topicName) => {
           setSelectedTopics((prev) =>
             prev.includes(topicName)
@@ -218,9 +279,7 @@ export default function DashboardPage() {
         onSelectAll={() => setSelectedTopics(availableTopics)}
         onClearAll={() => setSelectedTopics([])}
         onSelectDueOnly={() =>
-          setSelectedTopics(
-            dueTopicNames.length > 0 ? dueTopicNames : availableTopics,
-          )
+          setSelectedTopics(dueTopicNames.length > 0 ? dueTopicNames : availableTopics)
         }
         onStartReview={startReview}
       />
@@ -228,25 +287,41 @@ export default function DashboardPage() {
       <section className="dashboard-topics">
         <h2 className="dashboard-topics__title">By topic</h2>
 
-        {isLoading ? (
-          <StateMessage title="Loading dashboard data" tone="info">
-            Fetching topic stats and review availability.
-          </StateMessage>
+        {error && hasAnyData ? (
+          <div className="dashboard-inline-error">
+            <StateMessage title="Could not refresh latest metrics" tone="warning">
+              Showing the last successful snapshot. Retry when ready.
+            </StateMessage>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => void loadDashboard()}
+              disabled={isRefreshing}
+            >
+              Retry
+            </Button>
+          </div>
         ) : null}
 
-        {error ? (
-          <StateMessage title="Failed to load dashboard" tone="danger">
-            {error}
-          </StateMessage>
+        {!error && topics.length === 0 ? (
+          <Card tone="inset" padding="md" className="dashboard-empty-state">
+            <StateMessage title="No topics available yet" tone="warning">
+              Seed cards first to populate your review workspace.
+            </StateMessage>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadDashboard()}
+              disabled={isRefreshing}
+            >
+              Reload dashboard
+            </Button>
+          </Card>
         ) : null}
 
-        {!isLoading && !error && topics.length === 0 ? (
-          <StateMessage title="No topics available yet" tone="warning">
-            Seed cards first to populate your review workspace.
-          </StateMessage>
-        ) : null}
-
-        {!isLoading && !error && topics.length > 0 ? <TopicTable topics={topics} /> : null}
+        {topics.length > 0 ? <TopicTable topics={topics} /> : null}
       </section>
     </div>
   )
@@ -266,5 +341,27 @@ function DashboardStat({ label, value, detail, tone }: DashboardStatProps) {
       <p className="dashboard-stat__value">{value}</p>
       <p className="dashboard-stat__detail">{detail}</p>
     </article>
+  )
+}
+
+function DashboardLoadingState() {
+  return (
+    <div className="dashboard-loading" aria-hidden="true">
+      <div className="dashboard-loading__hero">
+        <span className="dashboard-loading__block dashboard-loading__block--lg" />
+        <span className="dashboard-loading__block dashboard-loading__block--sm" />
+      </div>
+      <div className="dashboard-loading__stats">
+        <span className="dashboard-loading__block dashboard-loading__block--md" />
+        <span className="dashboard-loading__block dashboard-loading__block--md" />
+        <span className="dashboard-loading__block dashboard-loading__block--md" />
+      </div>
+      <div className="dashboard-loading__scope">
+        <span className="dashboard-loading__block dashboard-loading__block--sm" />
+        <span className="dashboard-loading__block dashboard-loading__block--sm" />
+        <span className="dashboard-loading__block dashboard-loading__block--sm" />
+      </div>
+      <span className="dashboard-loading__block dashboard-loading__block--table" />
+    </div>
   )
 }
