@@ -9,6 +9,7 @@ import FeedbackPanel from '../components/review/FeedbackPanel'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
+import ProgressBar from '../components/ui/ProgressBar'
 import StateMessage from '../components/ui/StateMessage'
 import Textarea from '../components/ui/Textarea'
 import './review.css'
@@ -164,12 +165,11 @@ export default function ReviewPage() {
             )
           }
         >
-          <div className="review-progress__track" role="presentation">
-            <span
-              className="review-progress__fill"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+          <ProgressBar
+            value={progressPercent}
+            className="review-progress__bar"
+            ariaLabel="Session progress"
+          />
         </Card>
       </section>
 

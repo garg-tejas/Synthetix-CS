@@ -6,19 +6,12 @@
   overflow: hidden;
 }
 
-.review-progress__track {
+.review-progress__bar {
   margin-top: var(--space-3);
-  height: 0.55rem;
-  border-radius: var(--radius-pill);
-  background: rgba(97, 129, 170, 0.28);
-  overflow: hidden;
 }
 
-.review-progress__fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--gradient-accent);
+.review-progress__bar .ui-progress__track {
+  height: 0.55rem;
 }
 
 .review-workspace {
@@ -115,18 +108,8 @@
   font-size: 1rem;
 }
 
-.review-feedback-panel__score-track {
+.review-feedback-panel__score-bar .ui-progress__track {
   height: 0.52rem;
-  border-radius: var(--radius-pill);
-  background: rgba(88, 120, 163, 0.26);
-  overflow: hidden;
-}
-
-.review-feedback-panel__score-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--gradient-accent);
 }
 
 .review-feedback-panel__section {

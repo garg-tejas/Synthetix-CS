@@ -4,6 +4,7 @@ import type { QuizAnswerResponse } from '../../api/types'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
+import ProgressBar from '../ui/ProgressBar'
 
 interface FeedbackPanelProps {
   result: QuizAnswerResponse
@@ -63,12 +64,11 @@ export default function FeedbackPanel({
           <span>Model score</span>
           <strong>{scoreLabel}</strong>
         </div>
-        <div className="review-feedback-panel__score-track" role="presentation">
-          <span
-            className="review-feedback-panel__score-fill"
-            style={{ width: `${scorePercent}%` }}
-          />
-        </div>
+        <ProgressBar
+          value={scorePercent}
+          className="review-feedback-panel__score-bar"
+          ariaLabel="Model score"
+        />
       </div>
 
       <section className="review-feedback-panel__section">

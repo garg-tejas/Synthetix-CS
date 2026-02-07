@@ -383,18 +383,8 @@
   font-family: var(--font-mono);
 }
 
-.dashboard-topic-table__progress-track {
+.dashboard-topic-table__progress-bar .ui-progress__track {
   height: 0.45rem;
-  border-radius: var(--radius-pill);
-  background: rgba(105, 130, 168, 0.25);
-  overflow: hidden;
-}
-
-.dashboard-topic-table__progress-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--gradient-accent);
 }
 
 .dashboard-topic-table__metric {

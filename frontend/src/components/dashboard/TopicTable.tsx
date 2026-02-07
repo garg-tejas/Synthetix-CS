@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 
 import type { TopicStats } from '../../api/types'
 import { Badge } from '../ui'
+import ProgressBar from '../ui/ProgressBar'
 
 interface TopicTableProps {
   topics: TopicStats[]
@@ -80,12 +81,11 @@ export default function TopicTable({ topics }: TopicTableProps) {
                     </span>
                     <span>{topic.progressPercent}%</span>
                   </div>
-                  <div className="dashboard-topic-table__progress-track" role="presentation">
-                    <span
-                      className="dashboard-topic-table__progress-fill"
-                      style={{ width: `${topic.progressPercent}%` }}
-                    />
-                  </div>
+                  <ProgressBar
+                    value={topic.progressPercent}
+                    className="dashboard-topic-table__progress-bar"
+                    ariaLabel={`${topic.topicName} progress`}
+                  />
                 </td>
                 <td className="dashboard-topic-table__metric">{topic.dueToday}</td>
                 <td className="dashboard-topic-table__metric">{topic.overdue}</td>
@@ -114,12 +114,11 @@ export default function TopicTable({ topics }: TopicTableProps) {
                 </span>
                 <span>{topic.progressPercent}%</span>
               </div>
-              <div className="dashboard-topic-table__progress-track" role="presentation">
-                <span
-                  className="dashboard-topic-table__progress-fill"
-                  style={{ width: `${topic.progressPercent}%` }}
-                />
-              </div>
+              <ProgressBar
+                value={topic.progressPercent}
+                className="dashboard-topic-table__progress-bar"
+                ariaLabel={`${topic.topicName} progress`}
+              />
             </div>
             <dl className="dashboard-topic-card__metrics">
               <div>

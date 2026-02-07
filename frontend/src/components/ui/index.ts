@@ -10,6 +10,9 @@ export type { CardProps } from './Card'
 export { default as Input } from './Input'
 export type { InputProps } from './Input'
 
+export { default as ProgressBar } from './ProgressBar'
+export type { ProgressBarProps } from './ProgressBar'
+
 export { default as StateMessage } from './StateMessage'
 export type { StateMessageProps } from './StateMessage'
 
