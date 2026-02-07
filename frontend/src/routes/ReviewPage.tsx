@@ -5,6 +5,7 @@ import type { ApiError } from '../api/client'
 import { getNextCards, submitAnswer } from '../api/quiz'
 import type { QuizAnswerResponse, QuizCard } from '../api/types'
 import PageHeader from '../components/layout/PageHeader'
+import FeedbackPanel from '../components/review/FeedbackPanel'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
@@ -220,7 +221,7 @@ export default function ReviewPage() {
             title="Your response"
             subtitle={
               result
-                ? 'Answer submitted. Review feedback below or move to next card.'
+                ? 'Answer submitted. Review feedback and choose the next step below.'
                 : 'Draft your response before submitting.'
             }
           >
@@ -231,6 +232,7 @@ export default function ReviewPage() {
                 onChange={(e) => setUserAnswer(e.target.value)}
                 rows={9}
                 required
+                disabled={!!result}
               />
 
               <div className="review-compose__actions">
@@ -242,49 +244,26 @@ export default function ReviewPage() {
                 >
                   Submit answer
                 </Button>
-
-                {result && hasMoreAfterCurrent ? (
-                  <Button type="button" variant="secondary" onClick={goToNextCard}>
-                    Next card
-                  </Button>
-                ) : null}
-
-                {result && !hasMoreAfterCurrent ? (
-                  <Button type="button" variant="secondary" onClick={() => navigate('/')}>
-                    Finish session
-                  </Button>
-                ) : null}
               </div>
+
+              {result ? (
+                <p className="review-compose__submitted-note">
+                  Submission locked. Use the feedback panel to continue.
+                </p>
+              ) : null}
             </form>
           </Card>
         </section>
       ) : null}
 
       {result ? (
-        <section className="review-feedback">
-          <h3>Feedback</h3>
-          <div>
-            <strong>Model verdict:</strong> {result.verdict ?? 'n/a'}{' '}
-            {typeof result.model_score === 'number'
-              ? `(score ${result.model_score}/5)`
-              : ''}
-          </div>
-          <div>
-            <strong>Reference answer:</strong>
-            <p>{result.answer}</p>
-          </div>
-          {result.explanation ? (
-            <div>
-              <strong>Context snippet:</strong>
-              <p className="review-feedback__snippet">{result.explanation}</p>
-            </div>
-          ) : null}
-          {result.next_due_at ? (
-            <p className="review-feedback__next-due">
-              Next review scheduled at {result.next_due_at}
-            </p>
-          ) : null}
-        </section>
+        <FeedbackPanel
+          result={result}
+          hasMoreAfterCurrent={hasMoreAfterCurrent}
+          onNextCard={goToNextCard}
+          onFinishSession={() => navigate('/')}
+          onBackToDashboard={() => navigate('/')}
+        />
       ) : null}
     </div>
   )

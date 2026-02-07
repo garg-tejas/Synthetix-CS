@@ -69,6 +69,16 @@
   flex-wrap: wrap;
 }
 
+.review-compose__submitted-note {
+  margin: 0;
+  padding: 0.52rem 0.72rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(54, 216, 255, 0.32);
+  background: rgba(15, 67, 88, 0.2);
+  color: #c5f3ff;
+  font-size: 0.82rem;
+}
+
 .review-empty {
   display: grid;
   gap: var(--space-4);
@@ -80,32 +90,76 @@
   gap: var(--space-2);
 }
 
-.review-feedback {
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  box-shadow: var(--shadow-elev-1);
-  padding: var(--space-4);
+.review-feedback-panel {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
-.review-feedback h3 {
+.review-feedback-panel__score {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.review-feedback-panel__score-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+}
+
+.review-feedback-panel__score-meta strong {
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.review-feedback-panel__score-track {
+  height: 0.52rem;
+  border-radius: var(--radius-pill);
+  background: rgba(88, 120, 163, 0.26);
+  overflow: hidden;
+}
+
+.review-feedback-panel__score-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--gradient-accent);
+}
+
+.review-feedback-panel__section {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.review-feedback-panel__section h4 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
 }
 
-.review-feedback p {
-  margin: var(--space-1) 0 0;
+.review-feedback-panel__section p {
+  margin: 0;
+  color: var(--text-body);
+  line-height: 1.6;
 }
 
-.review-feedback__snippet {
+.review-feedback-panel__snippet {
   white-space: pre-wrap;
 }
 
-.review-feedback__next-due {
+.review-feedback-panel__next-due {
+  margin: 0;
   font-size: 0.88rem;
   color: var(--text-muted);
+}
+
+.review-feedback-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 @media (max-width: 960px) {
@@ -120,6 +174,10 @@
   }
 
   .review-empty__actions > * {
+    width: 100%;
+  }
+
+  .review-feedback-panel__actions > * {
     width: 100%;
   }
 }
