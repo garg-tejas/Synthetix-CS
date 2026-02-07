@@ -9,6 +9,8 @@ class QuizCard(BaseModel):
     """Single quiz card to present to the user."""
 
     card_id: int
+    canonical_card_id: Optional[int] = None
+    is_variant: bool = False
     topic: str
     question: str
     difficulty: Optional[str] = None

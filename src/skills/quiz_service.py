@@ -108,6 +108,7 @@ class QuizService:
         card: Card,
         review_state: Optional[ReviewState],
         quality: int,
+        served_card_id: Optional[int] = None,
         response_time_ms: Optional[int] = None,
         now: Optional[dt.datetime] = None,
     ) -> tuple[ReviewState, ReviewAttempt]:
@@ -142,6 +143,7 @@ class QuizService:
         attempt = ReviewAttempt(
             user_id=user_id,
             card_id=card.id,
+            served_card_id=served_card_id,
             attempted_at=now,
             quality=quality,
             response_time_ms=response_time_ms,

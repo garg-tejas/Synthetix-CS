@@ -149,8 +149,28 @@ def test_record_attempt_creates_state_for_new_card():
     assert state.due_at is not None
     assert attempt.user_id == 1
     assert attempt.card_id == card.id
+    assert attempt.served_card_id is None
     assert attempt.quality == 5
     assert attempt.response_time_ms == 1234
+
+
+def test_record_attempt_tracks_served_variant_id():
+    svc = QuizService()
+    topic = _make_topic("os", 1)
+    card = _make_card(1, topic)
+    now = dt.datetime(2025, 1, 10, tzinfo=dt.timezone.utc)
+
+    _state, attempt = svc.record_attempt(
+        user_id=1,
+        card=card,
+        review_state=None,
+        quality=3,
+        served_card_id=99,
+        response_time_ms=222,
+        now=now,
+    )
+    assert attempt.card_id == 1
+    assert attempt.served_card_id == 99
 
 
 def test_get_stats_counts_per_topic():

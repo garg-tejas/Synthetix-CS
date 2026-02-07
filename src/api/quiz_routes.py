@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Annotated, List
 import datetime as dt
@@ -16,6 +16,7 @@ from src.skills.grader import grade_answer
 from src.skills.path_planner import PathNode
 from src.skills.session_service import QuizSessionService, QuizSessionState
 from src.skills.swot import refresh_user_swot
+from src.skills.variant_generator import VariantGenerator
 from src.skills.schemas import (
     LearningPathNode,
     QuizAnswerRequest,
@@ -78,9 +79,14 @@ def _quiz_sessions_store(request: Request) -> dict[str, QuizSessionState]:
     return store
 
 
-def _to_quiz_card(card: Card) -> QuizCard:
+def _to_quiz_card(card: Card, *, canonical_card_id: int | None = None) -> QuizCard:
+    canonical_id = canonical_card_id
+    if canonical_id is None:
+        canonical_id = card.variant_of_card_id or card.id
     return QuizCard(
         card_id=card.id,
+        canonical_card_id=canonical_id,
+        is_variant=card.id != canonical_id,
         topic=card.topic.name if card.topic else "",  # type: ignore[union-attr]
         question=card.question,
         difficulty=card.difficulty,
@@ -144,6 +150,7 @@ async def get_next_quiz_cards(
     payload: QuizNextRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
+    request: Request,
 ) -> QuizNextResponse:
     """
     Return the next batch of quiz cards for the current user.
@@ -182,23 +189,28 @@ async def get_next_quiz_cards(
     now = dt.datetime.now(dt.timezone.utc)
     due_count = 0
     new_count = 0
+    variant_generator = VariantGenerator(
+        chunks_by_id=getattr(request.app.state, "chunks_by_id", {}) or {}
+    )
+    quiz_cards: list[QuizCard] = []
     for card in selected_cards:
         rs = user_state_by_card.get(card.id)
+        is_due = rs is not None and rs.due_at is not None and rs.due_at <= now
         if rs is None:
             new_count += 1
-        elif rs.due_at is not None and rs.due_at <= now:
+        elif is_due:
             due_count += 1
 
-    quiz_cards = [
-        QuizCard(
-            card_id=card.id,
-            topic=card.topic.name if card.topic else "",  # type: ignore[union-attr]
-            question=card.question,
-            difficulty=card.difficulty,
-            question_type=card.question_type,
-        )
-        for card in selected_cards
-    ]
+        served = card
+        if is_due:
+            served = await variant_generator.select_or_create_variant(
+                db=db,
+                user_id=current_user.id,
+                canonical_card=card,
+            )
+            if served.topic is None and card.topic is not None:  # type: ignore[union-attr]
+                served.topic = card.topic  # type: ignore[assignment]
+        quiz_cards.append(_to_quiz_card(served, canonical_card_id=card.id))
 
     return QuizNextResponse(cards=quiz_cards, due_count=due_count, new_count=new_count)
 
@@ -215,44 +227,53 @@ async def submit_quiz_answer(
     """
     svc = QuizService()
 
-    # Load the card.
-    card_result = await db.execute(
+    # Load served card.
+    served_result = await db.execute(
         select(Card)
         .options(selectinload(Card.topic))
         .where(Card.id == payload.card_id)
     )
-    card = card_result.scalar_one_or_none()
-    if card is None:
+    served_card = served_result.scalar_one_or_none()
+    if served_card is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Card not found",
         )
 
-    # Load existing review state for this user + card, if any.
+    canonical_card = served_card
+    if served_card.variant_of_card_id is not None:
+        canonical_result = await db.execute(
+            select(Card)
+            .options(selectinload(Card.topic))
+            .where(Card.id == served_card.variant_of_card_id)
+        )
+        loaded_canonical = canonical_result.scalar_one_or_none()
+        if loaded_canonical is not None:
+            canonical_card = loaded_canonical
+
+    # Load existing review state for this user + canonical card, if any.
     state_result = await db.execute(
         select(ReviewState).where(
             ReviewState.user_id == current_user.id,
-            ReviewState.card_id == card.id,
+            ReviewState.card_id == canonical_card.id,
         )
     )
     review_state = state_result.scalar_one_or_none()
 
-    # RAG-style context: use source_chunk_id to pull the underlying chunk text
-    # from the already loaded RAG chunks, if available.
+    # RAG-style context from served card chunk if available.
     explanation = None
     chunks_by_id = getattr(request.app.state, "chunks_by_id", {}) or {}
-    if card.source_chunk_id and card.source_chunk_id in chunks_by_id:
-        chunk = chunks_by_id[card.source_chunk_id]
+    if served_card.source_chunk_id and served_card.source_chunk_id in chunks_by_id:
+        chunk = chunks_by_id[served_card.source_chunk_id]
         text = getattr(chunk, "text", "")
         if text:
             max_len = 600
-            explanation = text[:max_len] + ("…" if len(text) > max_len else "")
+            explanation = text[:max_len] + ("..." if len(text) > max_len else "")
 
-    # Use LLM-based grader to score the user's answer on a 0–5 scale.
-    subject = card.topic.name if card.topic else None  # type: ignore[union-attr]
+    subject = canonical_card.topic.name if canonical_card.topic else None  # type: ignore[union-attr]
     grade = grade_answer(
-        question=card.question,
-        reference_answer=card.answer,
+        question=served_card.question,
+        reference_answer=served_card.answer,
         user_answer=payload.user_answer,
         subject=subject,
         context_excerpt=explanation,
@@ -260,13 +281,13 @@ async def submit_quiz_answer(
 
     updated_state, attempt = svc.record_attempt(
         user_id=current_user.id,
-        card=card,
+        card=canonical_card,
         review_state=review_state,
         quality=grade.score_0_5,
+        served_card_id=served_card.id,
         response_time_ms=payload.response_time_ms,
     )
 
-    # Persist changes.
     if review_state is None:
         db.add(updated_state)
     db.add(attempt)
@@ -276,7 +297,7 @@ async def submit_quiz_answer(
     topic_cards_result = await db.execute(
         select(Card)
         .options(selectinload(Card.topic))
-        .where(Card.topic_id == card.topic_id)
+        .where(Card.topic_id == canonical_card.topic_id)
     )
     topic_cards = topic_cards_result.scalars().unique().all()
     await _refresh_swot_snapshot(
@@ -286,15 +307,14 @@ async def submit_quiz_answer(
     )
 
     return QuizAnswerResponse(
-        answer=card.answer,
+        answer=served_card.answer,
         explanation=explanation,
-        source_chunk_id=card.source_chunk_id,
+        source_chunk_id=served_card.source_chunk_id,
         model_score=grade.score_0_5,
         verdict=grade.verdict,
         next_due_at=updated_state.due_at.isoformat() if updated_state.due_at else None,
         interval_days=updated_state.interval_days,
     )
-
 
 @router.get("/stats", response_model=QuizStatsResponse)
 async def get_quiz_stats(
@@ -363,7 +383,10 @@ async def start_quiz_session(
     )
     _quiz_sessions_store(request)[state.session_id] = state
 
-    current_card = state.current_card()
+    current_card = await session_service.get_current_presented_card(
+        db=db,
+        state=state,
+    )
     return QuizSessionStartResponse(
         session_id=state.session_id,
         current_card=_to_quiz_card(current_card) if current_card else None,
@@ -428,4 +451,5 @@ async def finish_quiz_session(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     store.pop(session_id, None)
     return QuizSessionFinishResponse(status="finished", session_id=session_id)
+
 
