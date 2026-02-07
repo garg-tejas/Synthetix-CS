@@ -19,7 +19,7 @@ function App() {
               <Route path="/review" element={<ReviewPage />} />
             </Route>
           </Route>
-          <Route element={<AppShell mode="auth" width="narrow" />}>
+          <Route element={<AppShell mode="auth" width="content" />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
           </Route>

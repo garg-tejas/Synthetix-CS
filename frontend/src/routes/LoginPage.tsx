@@ -4,7 +4,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { login } from '../api/auth'
 import type { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { PageHeader } from '../components/layout'
+import AuthLayout from '../components/auth/AuthLayout'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import StateMessage from '../components/ui/StateMessage'
 
 export default function LoginPage() {
   const auth = useAuth()
@@ -39,43 +42,52 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="layout-stack layout-stack--md">
-      <PageHeader title="Log in" subtitle="Use your email or username." />
+    <AuthLayout
+      mode="login"
+      title="Log in"
+      subtitle="Continue your daily review rhythm with your existing account."
+      footer={
+        <p>
+          No account yet? <Link to="/signup">Create one now</Link>
+        </p>
+      }
+    >
+      <form onSubmit={onSubmit} className="auth-form">
+        <Input
+          label="Email or username"
+          value={emailOrUsername}
+          onChange={(e) => setEmailOrUsername(e.target.value)}
+          autoComplete="username"
+          required
+          density="lg"
+        />
 
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span>Email or username</span>
-          <input
-            value={emailOrUsername}
-            onChange={(e) => setEmailOrUsername(e.target.value)}
-            autoComplete="username"
-            required
-            style={{ padding: 10 }}
-          />
-        </label>
+        <Input
+          label="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          type="password"
+          autoComplete="current-password"
+          required
+          density="lg"
+        />
 
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span>Password</span>
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            autoComplete="current-password"
-            required
-            style={{ padding: 10 }}
-          />
-        </label>
+        {error ? (
+          <StateMessage title="Login failed" tone="danger" className="auth-form__error">
+            {error}
+          </StateMessage>
+        ) : null}
 
-        {error && <div style={{ color: '#b00020', fontSize: 14 }}>{error}</div>}
-
-        <button type="submit" disabled={isSubmitting} style={{ padding: 10, cursor: 'pointer' }}>
-          {isSubmitting ? 'Logging in...' : 'Log in'}
-        </button>
+        <Button
+          type="submit"
+          size="lg"
+          fullWidth
+          loading={isSubmitting}
+          loadingLabel="Logging in..."
+        >
+          Log in
+        </Button>
       </form>
-
-      <p>
-        No account? <Link to="/signup">Sign up</Link>
-      </p>
-    </div>
+    </AuthLayout>
   )
 }

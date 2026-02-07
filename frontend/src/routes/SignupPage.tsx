@@ -4,7 +4,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { signup } from '../api/auth'
 import type { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { PageHeader } from '../components/layout'
+import AuthLayout from '../components/auth/AuthLayout'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import StateMessage from '../components/ui/StateMessage'
 
 export default function SignupPage() {
   const auth = useAuth()
@@ -38,55 +41,62 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="layout-stack layout-stack--md">
-      <PageHeader title="Sign up" subtitle="Create an account to start tracking reviews." />
+    <AuthLayout
+      mode="signup"
+      title="Create account"
+      subtitle="Start tracking spaced-repetition mastery across your core subjects."
+      footer={
+        <p>
+          Already have an account? <Link to="/login">Log in</Link>
+        </p>
+      }
+    >
+      <form onSubmit={onSubmit} className="auth-form">
+        <Input
+          label="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          autoComplete="email"
+          required
+          density="lg"
+        />
 
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span>Email</span>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            autoComplete="email"
-            required
-            style={{ padding: 10 }}
-          />
-        </label>
+        <Input
+          label="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          autoComplete="username"
+          required
+          density="lg"
+        />
 
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span>Username</span>
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            required
-            style={{ padding: 10 }}
-          />
-        </label>
+        <Input
+          label="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          type="password"
+          autoComplete="new-password"
+          required
+          density="lg"
+        />
 
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span>Password</span>
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            autoComplete="new-password"
-            required
-            style={{ padding: 10 }}
-          />
-        </label>
+        {error ? (
+          <StateMessage title="Signup failed" tone="danger" className="auth-form__error">
+            {error}
+          </StateMessage>
+        ) : null}
 
-        {error && <div style={{ color: '#b00020', fontSize: 14 }}>{error}</div>}
-
-        <button type="submit" disabled={isSubmitting} style={{ padding: 10, cursor: 'pointer' }}>
-          {isSubmitting ? 'Creating...' : 'Create account'}
-        </button>
+        <Button
+          type="submit"
+          size="lg"
+          fullWidth
+          loading={isSubmitting}
+          loadingLabel="Creating account..."
+        >
+          Create account
+        </Button>
       </form>
-
-      <p>
-        Already have an account? <Link to="/login">Log in</Link>
-      </p>
-    </div>
+    </AuthLayout>
   )
 }

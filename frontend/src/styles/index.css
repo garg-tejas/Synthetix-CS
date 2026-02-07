@@ -3,3 +3,4 @@
 @import './utilities.css';
 @import '../components/ui/ui.css';
 @import '../components/layout/layout.css';
+@import '../components/auth/auth-layout.css';
