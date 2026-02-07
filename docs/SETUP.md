@@ -119,15 +119,6 @@ uv run python -m eval.generation.validate_qa \
   --output eval/generation/output/generated_questions.llm_checkpoint.validated.jsonl
 ```
 
-Optional helper to tune `--batch-size` and `--max-batch-chars`:
-
-```bash
-uv run python -m eval.generation.analyze_scoring_payload \
-  eval/generation/output/generated_questions.jsonl \
-  --target-max-chars 24000 \
-  --target-batch-size 10
-```
-
 ### 8. Seed quiz content
 
 First, run in dry-run mode:
@@ -160,16 +151,40 @@ The API will:
 - Load RAG chunks and build the RAG agent
 - Use PostgreSQL for auth and quiz persistence
 
-### 10. Exercise the main flows
+### 10. Run the frontend
 
-#### 10.1 Auth
+In a new terminal:
+
+```bash
+cd frontend
+pnpm install
+cp .env.example .env
+```
+
+If your backend is not running on `http://localhost:8000`, update `frontend/.env`:
+
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+Start the frontend:
+
+```bash
+pnpm dev
+```
+
+Open the app at `http://localhost:5173`.
+
+### 11. Exercise the main flows
+
+#### 11.1 Auth
 
 - `POST /auth/signup` - create a user and receive access/refresh tokens
 - `POST /auth/login` - log in with email or username
 - `POST /auth/refresh` - get a new access token from a refresh token
 - `GET /auth/me` - inspect the current user
 
-#### 10.2 RAG endpoints
+#### 11.2 RAG endpoints
 
 - `GET /api/health` - basic health and `chunks_loaded` count
 - `GET /api/stats` - active conversation count
@@ -177,7 +192,7 @@ The API will:
 - `POST /api/chat` - non-streaming RAG answer
 - `POST /api/chat/stream` - streaming RAG answer (SSE)
 
-#### 10.3 Quiz endpoints
+#### 11.3 Quiz endpoints
 
 All quiz endpoints require a Bearer token from the auth routes.
 
