@@ -13,6 +13,37 @@ class GradeResult:
     verdict: str
     missing_points: list[str]
     incorrect_points: list[str]
+    concept_summary: str
+    where_you_missed: list[str]
+    should_remediate: bool
+
+
+def _normalize_verdict(raw_verdict: str, *, score: int) -> str:
+    normalized = raw_verdict.strip().lower().replace("-", "_").replace(" ", "_")
+    if "partial" in normalized:
+        return "partially_correct"
+    if "incorrect" in normalized or "wrong" in normalized:
+        return "incorrect"
+    if normalized == "correct":
+        return "correct"
+    if score >= 5:
+        return "correct"
+    if score >= 3:
+        return "partially_correct"
+    return "incorrect"
+
+
+def _coerce_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        if isinstance(value, str) and value.strip():
+            return [value.strip()]
+        return []
+    out: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text:
+            out.append(text)
+    return out
 
 
 def _build_prompt(
@@ -55,8 +86,16 @@ Respond with a single JSON object with this structure:
   "score_0_5": <integer from 0 to 5>,
   "verdict": "correct" | "partially_correct" | "incorrect",
   "missing_points": ["..."],
-  "incorrect_points": ["..."]
+  "incorrect_points": ["..."],
+  "concept_summary": "<2-4 sentences. Explain the core concept clearly if answer is partial/incorrect; use empty string when correct.>",
+  "where_you_missed": ["<1-3 concise, concrete misses only when partial/incorrect>"],
+  "should_remediate": <true when partial/incorrect, false when correct>
 }
+
+Rules:
+- Be strict but fair. Do not nitpick minor wording differences.
+- Only point out real conceptual misses; do not invent faults.
+- Keep output concise and actionable.
 
 Do not include any explanation outside the JSON. The JSON must be the only content in your reply.
 """
@@ -105,28 +144,53 @@ def grade_answer(
     )
 
     client = create_client()
-    raw = client.generate_single(prompt, max_tokens=256, temperature=0.1)
+    raw = client.generate_single(prompt, max_tokens=384, temperature=0.1)
 
     score = 3
     verdict = "partially_correct"
     missing: list[str] = []
     incorrect: list[str] = []
+    concept_summary = ""
+    where_you_missed: list[str] = []
+    should_remediate = True
 
     try:
         data: Dict[str, Any] = json.loads(raw)
         score = int(data.get("score_0_5", score))
         score = max(0, min(5, score))
         verdict = str(data.get("verdict", verdict))
-        missing = list(data.get("missing_points", missing))  # type: ignore[arg-type]
-        incorrect = list(data.get("incorrect_points", incorrect))  # type: ignore[arg-type]
+        missing = _coerce_string_list(data.get("missing_points", missing))
+        incorrect = _coerce_string_list(data.get("incorrect_points", incorrect))
+        concept_summary = str(data.get("concept_summary", concept_summary)).strip()
+        where_you_missed = _coerce_string_list(data.get("where_you_missed", where_you_missed))
+        should_value = data.get("should_remediate", should_remediate)
+        if isinstance(should_value, bool):
+            should_remediate = should_value
     except Exception:
         # If the model response is not valid JSON, fall back to a neutral score.
         pass
+    verdict = _normalize_verdict(verdict, score=score)
+    should_remediate = verdict != "correct"
+    if not should_remediate:
+        concept_summary = ""
+        where_you_missed = []
+    else:
+        if not concept_summary:
+            concept_summary = (
+                "Your answer is partly aligned, but it misses key concepts from the reference answer."
+            )
+        if not where_you_missed:
+            combined = [*incorrect, *missing]
+            where_you_missed = combined[:3]
+        if not where_you_missed:
+            where_you_missed = ["Your answer missed key concepts needed for a complete explanation."]
 
     return GradeResult(
         score_0_5=score,
         verdict=verdict,
         missing_points=missing,
         incorrect_points=incorrect,
+        concept_summary=concept_summary,
+        where_you_missed=where_you_missed,
+        should_remediate=should_remediate,
     )
-

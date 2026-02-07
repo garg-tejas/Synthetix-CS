@@ -236,8 +236,12 @@ async def answer_quiz_session(
         answer=outcome.answer,
         explanation=outcome.explanation,
         source_chunk_id=outcome.source_chunk_id,
+        show_source_context=bool(outcome.explanation),
         model_score=outcome.grade.score_0_5,
         verdict=outcome.grade.verdict,
+        should_remediate=outcome.should_remediate,
+        concept_summary=outcome.concept_summary,
+        where_you_missed=outcome.where_you_missed,
         next_due_at=(
             outcome.updated_state.due_at.isoformat()
             if outcome.updated_state.due_at

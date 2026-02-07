@@ -103,7 +103,16 @@ def test_quiz_session_start_and_finish_authenticated(client: TestClient):
         headers=headers,
     )
     # If no cards exist, session is complete; otherwise invalid current card.
-    assert r_answer.status_code in (400, 404)
+    if r_answer.status_code == 200:
+        answer_data = r_answer.json()
+        assert "answer" in answer_data
+        assert "show_source_context" in answer_data
+        assert "should_remediate" in answer_data
+        assert "concept_summary" in answer_data
+        assert "where_you_missed" in answer_data
+        assert isinstance(answer_data["where_you_missed"], list)
+    else:
+        assert r_answer.status_code in (400, 404)
 
     r_finish = client.post(
         f"/api/quiz/sessions/{session_id}/finish",

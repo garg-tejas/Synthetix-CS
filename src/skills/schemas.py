@@ -86,8 +86,12 @@ class QuizSessionAnswerResponse(BaseModel):
     answer: str
     explanation: Optional[str] = None
     source_chunk_id: Optional[str] = None
+    show_source_context: bool = False
     model_score: Optional[int] = Field(default=None, ge=0, le=5)
     verdict: Optional[str] = None
+    should_remediate: bool = False
+    concept_summary: Optional[str] = None
+    where_you_missed: List[str] = Field(default_factory=list)
     next_due_at: Optional[str] = None
     interval_days: Optional[int] = None
     next_card: Optional[QuizCard] = None

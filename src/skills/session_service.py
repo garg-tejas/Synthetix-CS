@@ -24,6 +24,9 @@ class SessionAnswerResult:
     answer: str
     explanation: Optional[str]
     source_chunk_id: Optional[str]
+    concept_summary: str
+    where_you_missed: list[str]
+    should_remediate: bool
     next_card: Optional[Card]
 
 
@@ -259,5 +262,8 @@ class QuizSessionService:
             answer=presented.answer,
             explanation=explanation,
             source_chunk_id=presented.source_chunk_id,
+            concept_summary=grade.concept_summary,
+            where_you_missed=grade.where_you_missed,
+            should_remediate=grade.should_remediate,
             next_card=next_card,
         )
