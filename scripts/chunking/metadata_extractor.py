@@ -106,17 +106,16 @@ def extract_potential_questions(
 
     if concept:
         if chunk_type == "definition":
-            questions.append(f"What is {concept}?")
-            questions.append(f"Define {concept}.")
+            questions.append(f"Why is {concept} important in real systems?")
+            questions.append(f"What trade-offs are involved in {concept}?")
         elif chunk_type == "algorithm":
             questions.append(f"How does {concept} work?")
-            questions.append(f"Explain the steps of {concept}.")
+            questions.append(f"What are the key steps and edge cases in {concept}?")
         elif chunk_type == "protocol":
-            questions.append(f"What is the {concept} protocol?")
-            questions.append(f"Explain how the {concept} protocol works.")
+            questions.append(f"How does the {concept} protocol work end-to-end?")
+            questions.append(f"What design trade-offs does the {concept} protocol make?")
         else:
-            # Generic section: still generate a focused explanation-style question.
-            questions.append(f"Explain {concept}.")
+            questions.append(f"Explain how {concept} behaves in practice.")
 
     # Fallback: if we failed to derive a concept, try using key terms.
     if not questions:
@@ -146,4 +145,3 @@ if __name__ == "__main__":
             sample,
         )
     )
-

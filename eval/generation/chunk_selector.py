@@ -31,12 +31,12 @@ def score_chunk_qa_potential(chunk: ChunkRecord) -> float:
     score = 0.0
 
     # 1) Base score by chunk type.
-    if chunk.chunk_type == "definition":
+    if chunk.chunk_type in ("algorithm", "protocol"):
         score += 1.0
-    elif chunk.chunk_type == "algorithm":
+    elif chunk.chunk_type == "section":
         score += 0.9
-    elif chunk.chunk_type in ("section", "protocol"):
-        score += 0.8
+    elif chunk.chunk_type == "definition":
+        score += 0.65
     elif chunk.chunk_type in ("theorem", "example"):
         score += 0.6
     else:
@@ -66,6 +66,32 @@ def score_chunk_qa_potential(chunk: ChunkRecord) -> float:
         score += 0.3
         if len(potential_qs) > 1:
             score += 0.05
+
+    # 5) Penalize broad introductory chunks that often yield shallow prompts.
+    header_lower = chunk.header_path.lower()
+    if any(
+        marker in header_lower
+        for marker in ("introduction", "overview", "business applications", "history", "what is")
+    ):
+        score -= 0.2
+
+    # 6) Reward technical depth signals.
+    depth_terms = (
+        "trade-off",
+        "throughput",
+        "latency",
+        "deadlock",
+        "consistency",
+        "isolation",
+        "fault",
+        "failure",
+        "recovery",
+        "congestion",
+        "synchronization",
+    )
+    text_lower = chunk.text[:1200].lower()
+    if any(term in header_lower or term in text_lower for term in depth_terms):
+        score += 0.15
 
     # Clamp to a sane lower bound.
     if score < 0.0:
@@ -123,4 +149,3 @@ def select_chunks_for_generation(
             break
 
     return selected
-
