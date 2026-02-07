@@ -128,8 +128,38 @@
   line-height: 1.6;
 }
 
+.review-feedback-panel__list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-body);
+}
+
+.review-feedback-panel__list li {
+  line-height: 1.5;
+}
+
 .review-feedback-panel__snippet {
   white-space: pre-wrap;
+}
+
+.review-feedback-panel__context {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.75rem;
+  background: var(--surface-soft);
+}
+
+.review-feedback-panel__context summary {
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.review-feedback-panel__context p {
+  margin-top: var(--space-2);
 }
 
 .review-feedback-panel__next-due {

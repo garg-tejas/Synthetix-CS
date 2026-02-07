@@ -80,8 +80,12 @@ export interface QuizSessionAnswerResponse {
   answer: string
   explanation?: string | null
   source_chunk_id?: string | null
+  show_source_context?: boolean
   model_score?: number | null
   verdict?: string | null
+  should_remediate?: boolean
+  concept_summary?: string | null
+  where_you_missed?: string[]
   next_due_at?: string | null
   interval_days?: number | null
   next_card?: QuizCard | null

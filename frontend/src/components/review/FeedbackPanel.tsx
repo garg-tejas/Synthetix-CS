@@ -24,6 +24,26 @@ export default function FeedbackPanel({
   onBackToDashboard,
 }: FeedbackPanelProps) {
   const normalizedVerdict = (result.verdict || 'n/a').toLowerCase()
+  const shouldRemediate = useMemo(() => {
+    if (typeof result.should_remediate === 'boolean') {
+      return result.should_remediate
+    }
+    return normalizedVerdict.includes('incorrect') || normalizedVerdict.includes('partial')
+  }, [normalizedVerdict, result.should_remediate])
+
+  const conceptSummary = useMemo(() => {
+    const text = (result.concept_summary || '').trim()
+    if (text) return text
+    return 'Your answer missed key concepts needed for a complete explanation.'
+  }, [result.concept_summary])
+
+  const whereYouMissed = useMemo(() => {
+    const points = result.where_you_missed || []
+    return points
+      .map((point) => point.trim())
+      .filter(Boolean)
+      .slice(0, 3)
+  }, [result.where_you_missed])
 
   const verdictTone = useMemo<FeedbackTone>(() => {
     if (normalizedVerdict.includes('incorrect')) return 'danger'
@@ -56,7 +76,7 @@ export default function FeedbackPanel({
       padding="lg"
       kicker="Feedback"
       title="Assessment complete"
-      subtitle="Review the explanation, then continue your session."
+      subtitle="Review the feedback, then continue your session."
       actions={<Badge tone={verdictTone}>{result.verdict ?? 'n/a'}</Badge>}
     >
       <div className="review-feedback-panel__score">
@@ -76,11 +96,33 @@ export default function FeedbackPanel({
         <p>{result.answer}</p>
       </section>
 
-      {result.explanation ? (
+      {shouldRemediate ? (
         <section className="review-feedback-panel__section">
-          <h4>Context snippet</h4>
-          <p className="review-feedback-panel__snippet">{result.explanation}</p>
+          <h4>Concept in brief</h4>
+          <p>{conceptSummary}</p>
         </section>
+      ) : null}
+
+      {shouldRemediate ? (
+        <section className="review-feedback-panel__section">
+          <h4>Where your answer missed</h4>
+          {whereYouMissed.length > 0 ? (
+            <ul className="review-feedback-panel__list">
+              {whereYouMissed.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>Your answer missed key concepts from the reference answer.</p>
+          )}
+        </section>
+      ) : null}
+
+      {result.show_source_context && result.explanation ? (
+        <details className="review-feedback-panel__context">
+          <summary>View source context</summary>
+          <p className="review-feedback-panel__snippet">{result.explanation}</p>
+        </details>
       ) : null}
 
       {nextDueLabel ? (
