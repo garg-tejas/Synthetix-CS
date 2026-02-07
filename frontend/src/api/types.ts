@@ -34,31 +34,49 @@ export interface UserOut {
 // Quiz types
 export interface QuizCard {
   card_id: number
+  canonical_card_id?: number | null
+  is_variant?: boolean
   topic: string
   question: string
   difficulty?: string | null
   question_type?: string | null
 }
 
-export interface QuizNextRequest {
+export interface LearningPathNode {
+  subject: string
+  topic_key: string
+  display_name: string
+  mastery_score: number
+  swot_bucket: string
+  priority_score: number
+}
+
+export interface SessionProgress {
+  current_index: number
+  total: number
+  completed: boolean
+}
+
+export interface QuizSessionStartRequest {
   topics?: string[] | null
+  subject?: string | null
   limit?: number
 }
 
-export interface QuizNextResponse {
-  cards: QuizCard[]
-  due_count: number
-  new_count: number
+export interface QuizSessionStartResponse {
+  session_id: string
+  current_card?: QuizCard | null
+  progress: SessionProgress
+  path: LearningPathNode[]
 }
 
-export interface QuizAnswerRequest {
+export interface QuizSessionAnswerRequest {
   card_id: number
   user_answer: string
-  quality?: number | null
   response_time_ms?: number | null
 }
 
-export interface QuizAnswerResponse {
+export interface QuizSessionAnswerResponse {
   answer: string
   explanation?: string | null
   source_chunk_id?: string | null
@@ -66,6 +84,13 @@ export interface QuizAnswerResponse {
   verdict?: string | null
   next_due_at?: string | null
   interval_days?: number | null
+  next_card?: QuizCard | null
+  progress: SessionProgress
+}
+
+export interface QuizSessionFinishResponse {
+  status: string
+  session_id: string
 }
 
 export interface TopicStats {

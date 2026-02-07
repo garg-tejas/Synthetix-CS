@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
 
-import type { QuizAnswerResponse } from '../../api/types'
+import type { QuizSessionAnswerResponse } from '../../api/types'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
 import ProgressBar from '../ui/ProgressBar'
 
 interface FeedbackPanelProps {
-  result: QuizAnswerResponse
+  result: QuizSessionAnswerResponse
   hasMoreAfterCurrent: boolean
   onNextCard: () => void
   onFinishSession: () => void

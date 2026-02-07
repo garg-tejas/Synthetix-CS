@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import type { ApiError } from '../api/client'
-import { getNextCards, submitAnswer } from '../api/quiz'
-import type { QuizAnswerResponse, QuizCard } from '../api/types'
+import { answerQuizSession, finishQuizSession, startQuizSession } from '../api/quiz'
+import type { QuizCard, QuizSessionAnswerResponse, SessionProgress } from '../api/types'
 import PageHeader from '../components/layout/PageHeader'
 import FeedbackPanel from '../components/review/FeedbackPanel'
 import Badge from '../components/ui/Badge'
@@ -14,59 +14,76 @@ import StateMessage from '../components/ui/StateMessage'
 import Textarea from '../components/ui/Textarea'
 import './review.css'
 
-interface CurrentCardState {
-  card: QuizCard
-  index: number
-  total: number
-}
-
 export default function ReviewPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [cards, setCards] = useState<QuizCard[]>([])
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [current, setCurrent] = useState<CurrentCardState | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [currentCard, setCurrentCard] = useState<QuizCard | null>(null)
+  const [progress, setProgress] = useState<SessionProgress | null>(null)
+  const [displayedIndex, setDisplayedIndex] = useState(0)
 
   const [userAnswer, setUserAnswer] = useState('')
   const [attemptStartedAt, setAttemptStartedAt] = useState<number | null>(null)
 
-  const [result, setResult] = useState<QuizAnswerResponse | null>(null)
+  const [result, setResult] = useState<QuizSessionAnswerResponse | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const hasMoreAfterCurrent = useMemo(
-    () => current !== null && current.index < current.total - 1,
-    [current],
-  )
+  const sessionIdRef = useRef<string | null>(null)
+  const sessionClosedRef = useRef(false)
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId
+  }, [sessionId])
+
+  const finishAndNavigateBack = useCallback(() => {
+    const activeSessionId = sessionIdRef.current
+    if (!activeSessionId || sessionClosedRef.current) {
+      navigate('/dashboard')
+      return
+    }
+    sessionClosedRef.current = true
+    void finishQuizSession(activeSessionId)
+      .catch(() => undefined)
+      .finally(() => {
+        sessionIdRef.current = null
+        setSessionId(null)
+        navigate('/dashboard')
+      })
+  }, [navigate])
 
   useEffect(() => {
     let cancelled = false
     const run = async () => {
       setIsLoading(true)
       setError(null)
+      setResult(null)
+      setUserAnswer('')
       try {
-        const state = location.state as { topics?: string[] | null } | null
+        const state = location.state as
+          | { topics?: string[] | null; subject?: string | null }
+          | null
         const topics = state?.topics && state.topics.length ? state.topics : undefined
-        const data = await getNextCards({ limit: 10, topics })
+        const subject = state?.subject || undefined
+        const data = await startQuizSession({ limit: 10, topics, subject })
         if (cancelled) return
-        const loadedCards = data.cards || []
-        setCards(loadedCards)
-        if (loadedCards.length > 0) {
-          setCurrent({
-            card: loadedCards[0],
-            index: 0,
-            total: loadedCards.length,
-          })
+        sessionClosedRef.current = false
+        setSessionId(data.session_id)
+        setProgress(data.progress)
+        setDisplayedIndex(0)
+        if (data.current_card) {
+          setCurrentCard(data.current_card)
           setAttemptStartedAt(performance.now())
         } else {
-          setCurrent(null)
+          setCurrentCard(null)
+          setAttemptStartedAt(null)
         }
       } catch (err) {
         if (cancelled) return
         const apiErr = err as ApiError
-        setError(apiErr.detail || 'Failed to load review cards')
+        setError(apiErr.detail || 'Failed to start review session')
       } finally {
         if (!cancelled) setIsLoading(false)
       }
@@ -77,20 +94,35 @@ export default function ReviewPage() {
     }
   }, [location.state])
 
+  useEffect(() => {
+    return () => {
+      const activeSessionId = sessionIdRef.current
+      if (!activeSessionId || sessionClosedRef.current) return
+      sessionClosedRef.current = true
+      void finishQuizSession(activeSessionId).catch(() => undefined)
+    }
+  }, [])
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!current) return
+    if (!currentCard || !sessionId) return
+    const trimmedAnswer = userAnswer.trim()
+    if (!trimmedAnswer) {
+      setError('Please enter an answer before submitting')
+      return
+    }
     setIsSubmitting(true)
     setError(null)
     try {
       const started = attemptStartedAt ?? performance.now()
       const responseTimeMs = Math.round(performance.now() - started)
-      const res = await submitAnswer({
-        card_id: current.card.card_id,
-        user_answer: userAnswer.trim(),
+      const res = await answerQuizSession(sessionId, {
+        card_id: currentCard.card_id,
+        user_answer: trimmedAnswer,
         response_time_ms: responseTimeMs,
       })
       setResult(res)
+      setProgress(res.progress)
     } catch (err) {
       const apiErr = err as ApiError
       setError(apiErr.detail || 'Failed to submit answer')
@@ -100,34 +132,33 @@ export default function ReviewPage() {
   }
 
   const goToNextCard = () => {
-    if (!cards || cards.length === 0) return
-    const nextIndex = currentIndex + 1
-    if (nextIndex >= cards.length) {
-      setCurrent(null)
+    if (!result?.next_card) {
+      setCurrentCard(null)
       return
     }
-    setCurrent({
-      card: cards[nextIndex],
-      index: nextIndex,
-      total: cards.length,
-    })
-    setCurrentIndex(nextIndex)
+    setCurrentCard(result.next_card)
+    setDisplayedIndex((previous) => previous + 1)
     setUserAnswer('')
     setResult(null)
     setAttemptStartedAt(performance.now())
   }
 
-  const noCards = !isLoading && !error && (!cards || cards.length === 0)
+  const noCards = !isLoading && !error && !currentCard && !result
 
   const progressPercent = useMemo(() => {
-    if (!current) return cards.length > 0 ? 100 : 0
-    return Math.round(((current.index + 1) / current.total) * 100)
-  }, [cards.length, current])
+    if (!progress || progress.total === 0) return 0
+    if (progress.completed && !currentCard) return 100
+    const stepsIntoRun = currentCard ? displayedIndex + 1 : displayedIndex
+    return Math.round((stepsIntoRun / progress.total) * 100)
+  }, [currentCard, displayedIndex, progress])
 
   const queueRemaining = useMemo(() => {
-    if (!current) return 0
-    return current.total - current.index - (result ? 1 : 0)
-  }, [current, result])
+    if (!currentCard || !progress) return 0
+    return Math.max(progress.total - displayedIndex - 1, 0)
+  }, [currentCard, displayedIndex, progress])
+
+  const hasMoreAfterCurrent = useMemo(() => Boolean(result?.next_card), [result])
+  const totalCards = progress?.total ?? 0
 
   return (
     <div className="review layout-stack layout-stack--lg">
@@ -135,8 +166,8 @@ export default function ReviewPage() {
         eyebrow="Session"
         title="Review workspace"
         subtitle={
-          current
-            ? `Card ${current.index + 1} of ${current.total}`
+          currentCard
+            ? `Card ${displayedIndex + 1} of ${totalCards}`
             : 'No active card'
         }
         backHref="/dashboard"
@@ -148,15 +179,15 @@ export default function ReviewPage() {
           className="review-progress__card"
           kicker="Session progress"
           title={
-            current ? `${progressPercent}% through this run` : 'Ready for the next run'
+            currentCard ? `${progressPercent}% through this run` : 'Ready for the next run'
           }
           subtitle={
-            current
+            currentCard
               ? `${queueRemaining} cards remaining after this step`
               : 'Select new scope from dashboard when ready.'
           }
           actions={
-            current ? (
+            currentCard ? (
               <Badge tone={result ? 'success' : 'info'}>
                 {result ? 'Answered' : 'In progress'}
               </Badge>
@@ -191,23 +222,23 @@ export default function ReviewPage() {
             Nice work. You can return to the dashboard and start a new session later.
           </StateMessage>
           <div className="review-empty__actions">
-            <Button type="button" onClick={() => navigate('/dashboard')}>
+            <Button type="button" onClick={finishAndNavigateBack}>
               Back to dashboard
             </Button>
           </div>
         </Card>
       ) : null}
 
-      {!isLoading && !error && current ? (
+      {!isLoading && !error && currentCard ? (
         <section className="review-workspace">
           <Card
             className="review-question"
             tone="default"
             padding="lg"
-            kicker={`Topic: ${current.card.topic}`}
+            kicker={`Topic: ${currentCard.topic}`}
             title="Question"
           >
-            <p className="review-question__text">{current.card.question}</p>
+            <p className="review-question__text">{currentCard.question}</p>
             <p className="review-question__hint">
               Explain your answer clearly. Use precise terms where possible.
             </p>
@@ -238,7 +269,7 @@ export default function ReviewPage() {
               <div className="review-compose__actions">
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !!result}
+                  disabled={isSubmitting || !!result || !sessionId}
                   loading={isSubmitting}
                   loadingLabel="Submitting..."
                 >
@@ -261,8 +292,8 @@ export default function ReviewPage() {
           result={result}
           hasMoreAfterCurrent={hasMoreAfterCurrent}
           onNextCard={goToNextCard}
-          onFinishSession={() => navigate('/dashboard')}
-          onBackToDashboard={() => navigate('/dashboard')}
+          onFinishSession={finishAndNavigateBack}
+          onBackToDashboard={finishAndNavigateBack}
         />
       ) : null}
     </div>
