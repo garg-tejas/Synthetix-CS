@@ -18,8 +18,8 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const ACCESS_KEY = 'slm.access_token'
-const REFRESH_KEY = 'slm.refresh_token'
+const ACCESS_KEY = 'csrag.access_token'
+const REFRESH_KEY = 'csrag.refresh_token'
 
 function readStoredToken(key: string): string | null {
   try {
@@ -141,4 +141,3 @@ export function useAuth(): AuthContextValue {
   }
   return ctx
 }
-

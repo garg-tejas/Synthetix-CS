@@ -3,7 +3,7 @@ import asyncpg
 
 
 async def main():
-    conn = await asyncpg.connect("postgresql://slm:slm@localhost:5432/slm_rag")
+    conn = await asyncpg.connect("postgresql://csrag:csrag@localhost:5432/cs_rag")
     rows = await conn.fetch("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
     for r in rows:
         print(r["table_name"])

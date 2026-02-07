@@ -15,7 +15,7 @@ def _get_database_url() -> str:
     """
     return os.getenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://slm:slm@localhost:5432/slm_rag",
+        "postgresql+asyncpg://csrag:csrag@localhost:5432/cs_rag",
     )
 
 
