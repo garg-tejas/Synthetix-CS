@@ -138,6 +138,24 @@
   margin-top: var(--space-1);
 }
 
+.auth-form__status {
+  margin: 0;
+  padding: 0.52rem 0.72rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(54, 216, 255, 0.32);
+  background: rgba(17, 72, 93, 0.24);
+  color: #c3f0ff;
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+}
+
+.auth-form__meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
 @media (max-width: 940px) {
   .auth-layout {
     grid-template-columns: 1fr;
