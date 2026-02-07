@@ -1,0 +1,155 @@
+@keyframes motion-rise-fade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motion-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes motion-soft-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(54, 216, 255, 0.22);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px rgba(54, 216, 255, 0);
+  }
+}
+
+.dashboard > .page-header {
+  animation: motion-rise-fade var(--motion-slow) var(--ease-emphasis) both;
+}
+
+.dashboard > .dashboard-status-line,
+.dashboard > .dashboard-hero,
+.dashboard > .dashboard-stats,
+.dashboard > .dashboard-scope,
+.dashboard > .dashboard-topics {
+  animation: motion-rise-fade var(--motion-slow) var(--ease-standard) both;
+}
+
+.dashboard > .dashboard-status-line {
+  animation-delay: 50ms;
+}
+
+.dashboard > .dashboard-hero {
+  animation-delay: 80ms;
+}
+
+.dashboard > .dashboard-stats {
+  animation-delay: 120ms;
+}
+
+.dashboard > .dashboard-scope {
+  animation-delay: 170ms;
+}
+
+.dashboard > .dashboard-topics {
+  animation-delay: 210ms;
+}
+
+.review > .page-header,
+.review > .review-progress,
+.review > .review-workspace,
+.review > .review-feedback-panel,
+.review > .review-empty {
+  animation: motion-rise-fade var(--motion-slow) var(--ease-standard) both;
+}
+
+.review > .review-progress {
+  animation-delay: 70ms;
+}
+
+.review > .review-workspace {
+  animation-delay: 120ms;
+}
+
+.review > .review-feedback-panel,
+.review > .review-empty {
+  animation-delay: 170ms;
+}
+
+.review-progress__fill,
+.review-feedback-panel__score-fill {
+  transition: width var(--motion-slow) var(--ease-emphasis);
+}
+
+.review-feedback-panel__actions .ui-btn:first-child {
+  animation: motion-soft-pulse 1.9s ease-in-out infinite;
+}
+
+.auth-layout__brand {
+  animation: motion-rise-fade var(--motion-slow) var(--ease-standard) both;
+}
+
+.auth-layout__panel {
+  animation: motion-slide-in var(--motion-slow) var(--ease-standard) both;
+}
+
+.auth-form > * {
+  animation: motion-rise-fade var(--motion-base) var(--ease-standard) both;
+}
+
+.auth-form > *:nth-child(1) {
+  animation-delay: 60ms;
+}
+
+.auth-form > *:nth-child(2) {
+  animation-delay: 100ms;
+}
+
+.auth-form > *:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.auth-form > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+.auth-form > *:nth-child(5) {
+  animation-delay: 220ms;
+}
+
+.auth-form > *:nth-child(6) {
+  animation-delay: 260ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .dashboard > *,
+  .review > *,
+  .auth-layout__brand,
+  .auth-layout__panel,
+  .auth-form > * {
+    animation: none !important;
+    transform: none !important;
+  }
+}

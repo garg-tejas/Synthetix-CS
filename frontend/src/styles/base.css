@@ -10,6 +10,10 @@ body,
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);
@@ -79,7 +83,7 @@ button:hover:not(:disabled) {
 
 button:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus);
+  box-shadow: var(--shadow-focus-strong);
 }
 
 button:disabled {
@@ -99,7 +103,8 @@ a:hover {
 }
 
 a:focus-visible {
-  outline: none;
+  outline: 2px solid rgba(54, 216, 255, 0.64);
+  outline-offset: 2px;
   text-decoration: underline;
 }
 
@@ -140,7 +145,12 @@ input:focus,
 textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: var(--shadow-focus);
+  box-shadow: var(--shadow-focus-strong);
+}
+
+:where(a, button, input, textarea, select, summary, [role='button']):focus-visible {
+  outline: 2px solid rgba(54, 216, 255, 0.64);
+  outline-offset: 2px;
 }
 
 ::selection {

@@ -32,7 +32,7 @@
 
   --text-strong: #f3f7ff;
   --text-body: #d8e3f6;
-  --text-muted: #99abc9;
+  --text-muted: #b0c0d8;
 
   --accent-primary: #36d8ff;
   --accent-primary-strong: #00b6e8;
@@ -43,6 +43,13 @@
   --shadow-elev-1: 0 10px 30px rgba(1, 8, 23, 0.35);
   --shadow-elev-2: 0 14px 38px rgba(2, 10, 28, 0.46);
   --shadow-focus: 0 0 0 2px rgba(54, 216, 255, 0.28);
+  --shadow-focus-strong: 0 0 0 2px rgba(9, 20, 36, 0.8), 0 0 0 4px rgba(54, 216, 255, 0.58);
+
+  --motion-fast: 160ms;
+  --motion-base: 240ms;
+  --motion-slow: 420ms;
+  --ease-standard: cubic-bezier(0.2, 0.65, 0.28, 1);
+  --ease-emphasis: cubic-bezier(0.16, 0.84, 0.3, 1);
 
   --gradient-canvas:
     radial-gradient(120% 95% at 8% 4%, rgba(41, 84, 153, 0.42) 0%, rgba(41, 84, 153, 0) 58%),
