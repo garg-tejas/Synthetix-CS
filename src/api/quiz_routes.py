@@ -13,6 +13,7 @@ from src.db.models import Card, ReviewAttempt, ReviewState, Topic, User
 from src.db.session import get_db
 from src.skills.quiz_service import QuizService
 from src.skills.grader import grade_answer
+from src.skills.swot import refresh_user_swot
 from src.skills.schemas import (
     QuizAnswerRequest,
     QuizAnswerResponse,
@@ -25,6 +26,39 @@ from src.skills.schemas import (
 
 
 router = APIRouter(prefix="/api/quiz", tags=["quiz"])
+
+
+async def _refresh_swot_snapshot(
+    *,
+    db: AsyncSession,
+    user_id: int,
+    cards: list[Card],
+) -> None:
+    if not cards:
+        return
+    card_ids = [card.id for card in cards]
+    states_result = await db.execute(
+        select(ReviewState).where(
+            ReviewState.user_id == user_id,
+            ReviewState.card_id.in_(card_ids),
+        )
+    )
+    attempts_result = await db.execute(
+        select(ReviewAttempt).where(
+            ReviewAttempt.user_id == user_id,
+            ReviewAttempt.card_id.in_(card_ids),
+        )
+    )
+    review_states = states_result.scalars().all()
+    review_attempts = attempts_result.scalars().all()
+    await refresh_user_swot(
+        db=db,
+        user_id=user_id,
+        cards=cards,
+        review_states=review_states,
+        review_attempts=review_attempts,
+    )
+    await db.commit()
 
 
 @router.get("/topics", response_model=List[TopicStats])
@@ -79,6 +113,12 @@ async def get_next_quiz_cards(
         select(ReviewState).where(ReviewState.user_id == current_user.id)
     )
     review_states = state_result.scalars().all()
+
+    await _refresh_swot_snapshot(
+        db=db,
+        user_id=current_user.id,
+        cards=cards,
+    )
 
     selected_cards = svc.get_next_cards(
         user_id=current_user.id,
@@ -184,6 +224,18 @@ async def submit_quiz_answer(
     await db.commit()
     await db.refresh(updated_state)
 
+    topic_cards_result = await db.execute(
+        select(Card)
+        .options(selectinload(Card.topic))
+        .where(Card.topic_id == card.topic_id)
+    )
+    topic_cards = topic_cards_result.scalars().unique().all()
+    await _refresh_swot_snapshot(
+        db=db,
+        user_id=current_user.id,
+        cards=topic_cards,
+    )
+
     return QuizAnswerResponse(
         answer=card.answer,
         explanation=explanation,
@@ -210,6 +262,12 @@ async def get_quiz_stats(
         select(Card).join(Topic).options(selectinload(Card.topic))
     )
     cards = card_result.scalars().unique().all()
+
+    await _refresh_swot_snapshot(
+        db=db,
+        user_id=current_user.id,
+        cards=cards,
+    )
 
     # Load all review states for this user.
     state_result = await db.execute(
