@@ -4,7 +4,13 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import type { ApiError } from '../api/client'
 import { getNextCards, submitAnswer } from '../api/quiz'
 import type { QuizAnswerResponse, QuizCard } from '../api/types'
-import { PageHeader } from '../components/layout'
+import PageHeader from '../components/layout/PageHeader'
+import Badge from '../components/ui/Badge'
+import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
+import StateMessage from '../components/ui/StateMessage'
+import Textarea from '../components/ui/Textarea'
+import './review.css'
 
 interface CurrentCardState {
   card: QuizCard
@@ -43,14 +49,17 @@ export default function ReviewPage() {
         const topics = state?.topics && state.topics.length ? state.topics : undefined
         const data = await getNextCards({ limit: 10, topics })
         if (cancelled) return
-        setCards(data.cards || [])
-        if (data.cards && data.cards.length > 0) {
+        const loadedCards = data.cards || []
+        setCards(loadedCards)
+        if (loadedCards.length > 0) {
           setCurrent({
-            card: data.cards[0],
+            card: loadedCards[0],
             index: 0,
-            total: data.cards.length,
+            total: loadedCards.length,
           })
           setAttemptStartedAt(performance.now())
+        } else {
+          setCurrent(null)
         }
       } catch (err) {
         if (cancelled) return
@@ -60,7 +69,7 @@ export default function ReviewPage() {
         if (!cancelled) setIsLoading(false)
       }
     }
-    run()
+    void run()
     return () => {
       cancelled = true
     }
@@ -108,130 +117,175 @@ export default function ReviewPage() {
 
   const noCards = !isLoading && !error && (!cards || cards.length === 0)
 
+  const progressPercent = useMemo(() => {
+    if (!current) return cards.length > 0 ? 100 : 0
+    return Math.round(((current.index + 1) / current.total) * 100)
+  }, [cards.length, current])
+
+  const queueRemaining = useMemo(() => {
+    if (!current) return 0
+    return current.total - current.index - (result ? 1 : 0)
+  }, [current, result])
+
   return (
-    <div className="layout-stack layout-stack--lg">
+    <div className="review layout-stack layout-stack--lg">
       <PageHeader
         eyebrow="Session"
-        title="Review"
+        title="Review workspace"
         subtitle={
-          current ? (
-            <>
-              Card {current.index + 1} of {current.total}
-            </>
-          ) : (
-            'No active card'
-          )
+          current
+            ? `Card ${current.index + 1} of ${current.total}`
+            : 'No active card'
         }
         backHref="/"
         backLabel="Back to dashboard"
       />
 
-      {isLoading && <div>Loading cards...</div>}
-      {error && <div style={{ color: '#b00020' }}>{error}</div>}
+      <section className="review-progress">
+        <Card
+          className="review-progress__card"
+          kicker="Session progress"
+          title={
+            current ? `${progressPercent}% through this run` : 'Ready for the next run'
+          }
+          subtitle={
+            current
+              ? `${queueRemaining} cards remaining after this step`
+              : 'Select new scope from dashboard when ready.'
+          }
+          actions={
+            current ? (
+              <Badge tone={result ? 'success' : 'info'}>
+                {result ? 'Answered' : 'In progress'}
+              </Badge>
+            ) : (
+              <Badge tone="neutral">Idle</Badge>
+            )
+          }
+        >
+          <div className="review-progress__track" role="presentation">
+            <span
+              className="review-progress__fill"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </Card>
+      </section>
 
-      {noCards && (
-        <div style={{ marginTop: 16 }}>
-          <p style={{ marginBottom: 8 }}>No cards are due right now.</p>
-          <button type="button" onClick={() => navigate('/')} style={{ padding: 10 }}>
-            Back to dashboard
-          </button>
-        </div>
-      )}
+      {isLoading ? (
+        <StateMessage title="Loading review cards" tone="info">
+          Preparing your next question set.
+        </StateMessage>
+      ) : null}
 
-      {!isLoading && !error && current && (
-        <section style={{ marginTop: 16 }}>
-          <article
-            style={{
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 16,
-              background: 'var(--card)',
-            }}
+      {error ? (
+        <StateMessage title="Review session error" tone="danger">
+          {error}
+        </StateMessage>
+      ) : null}
+
+      {noCards ? (
+        <Card className="review-empty" tone="inset" padding="lg">
+          <StateMessage title="No cards due right now" tone="success">
+            Nice work. You can return to the dashboard and start a new session later.
+          </StateMessage>
+          <div className="review-empty__actions">
+            <Button type="button" onClick={() => navigate('/')}>
+              Back to dashboard
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
+      {!isLoading && !error && current ? (
+        <section className="review-workspace">
+          <Card
+            className="review-question"
+            tone="default"
+            padding="lg"
+            kicker={`Topic: ${current.card.topic}`}
+            title="Question"
           >
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
-              Topic: {current.card.topic}
-            </div>
-            <h2 style={{ marginBottom: 10 }}>{current.card.question}</h2>
-          </article>
+            <p className="review-question__text">{current.card.question}</p>
+            <p className="review-question__hint">
+              Explain your answer clearly. Use precise terms where possible.
+            </p>
+          </Card>
 
-          <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
-            <label style={{ display: 'grid', gap: 6 }}>
-              <span>Your answer</span>
-              <textarea
+          <Card
+            className="review-compose"
+            tone="inset"
+            padding="lg"
+            kicker="Answer composer"
+            title="Your response"
+            subtitle={
+              result
+                ? 'Answer submitted. Review feedback below or move to next card.'
+                : 'Draft your response before submitting.'
+            }
+          >
+            <form onSubmit={onSubmit} className="review-compose__form">
+              <Textarea
+                label="Your answer"
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
-                rows={6}
+                rows={9}
                 required
-                style={{ padding: 10, resize: 'vertical' }}
               />
-            </label>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                type="submit"
-                disabled={isSubmitting || !!result}
-                style={{ padding: '10px 12px', cursor: 'pointer' }}
-              >
-                {isSubmitting ? 'Submitting...' : 'Submit answer'}
-              </button>
-              {result && hasMoreAfterCurrent && (
-                <button
-                  type="button"
-                  onClick={goToNextCard}
-                  style={{ padding: '10px 12px', cursor: 'pointer' }}
+              <div className="review-compose__actions">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !!result}
+                  loading={isSubmitting}
+                  loadingLabel="Submitting..."
                 >
-                  Next card
-                </button>
-              )}
-              {result && !hasMoreAfterCurrent && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/')}
-                  style={{ padding: '10px 12px', cursor: 'pointer' }}
-                >
-                  Finish session
-                </button>
-              )}
-            </div>
-          </form>
+                  Submit answer
+                </Button>
 
-          {result && (
-            <section
-              style={{
-                marginTop: 20,
-                borderTop: '1px solid #eee',
-                paddingTop: 16,
-              }}
-            >
-              <h3 style={{ marginBottom: 8 }}>Feedback</h3>
-              <div style={{ marginBottom: 8 }}>
-                <strong>Model verdict:</strong> {result.verdict ?? 'n/a'}{' '}
-                {typeof result.model_score === 'number'
-                  ? `(score ${result.model_score}/5)`
-                  : ''}
+                {result && hasMoreAfterCurrent ? (
+                  <Button type="button" variant="secondary" onClick={goToNextCard}>
+                    Next card
+                  </Button>
+                ) : null}
+
+                {result && !hasMoreAfterCurrent ? (
+                  <Button type="button" variant="secondary" onClick={() => navigate('/')}>
+                    Finish session
+                  </Button>
+                ) : null}
               </div>
-              <div style={{ marginBottom: 8 }}>
-                <strong>Reference answer:</strong>
-                <div style={{ marginTop: 4 }}>{result.answer}</div>
-              </div>
-              {result.explanation && (
-                <div style={{ marginTop: 8 }}>
-                  <strong>Context snippet:</strong>
-                  <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>
-                    {result.explanation}
-                  </div>
-                </div>
-              )}
-              {result.next_due_at && (
-                <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>
-                  Next review scheduled at {result.next_due_at}
-                </div>
-              )}
-            </section>
-          )}
+            </form>
+          </Card>
         </section>
-      )}
+      ) : null}
+
+      {result ? (
+        <section className="review-feedback">
+          <h3>Feedback</h3>
+          <div>
+            <strong>Model verdict:</strong> {result.verdict ?? 'n/a'}{' '}
+            {typeof result.model_score === 'number'
+              ? `(score ${result.model_score}/5)`
+              : ''}
+          </div>
+          <div>
+            <strong>Reference answer:</strong>
+            <p>{result.answer}</p>
+          </div>
+          {result.explanation ? (
+            <div>
+              <strong>Context snippet:</strong>
+              <p className="review-feedback__snippet">{result.explanation}</p>
+            </div>
+          ) : null}
+          {result.next_due_at ? (
+            <p className="review-feedback__next-due">
+              Next review scheduled at {result.next_due_at}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   )
 }
