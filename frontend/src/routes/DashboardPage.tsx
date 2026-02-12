@@ -240,24 +240,43 @@ export default function DashboardPage() {
             </div>
           }
         >
-          <dl className="dashboard-summary">
-            <div className="dashboard-summary__item">
-              <dt>Cards learned</dt>
-              <dd>{totals.learnedCards}</dd>
+          <div className="dashboard-hero__profile-body">
+            <div
+              className="dashboard-completion-ring"
+              role="img"
+              aria-label={`Completion rate ${completionRate}%`}
+            >
+              <div
+                className="dashboard-completion-ring__dial"
+                style={{
+                  background: `conic-gradient(var(--accent-primary) ${completionRate}%, rgba(126, 157, 181, 0.24) ${completionRate}% 100%)`,
+                }}
+              />
+              <div className="dashboard-completion-ring__core">
+                <strong>{completionRate}%</strong>
+                <span>completion</span>
+              </div>
             </div>
-            <div className="dashboard-summary__item">
-              <dt>Total cards</dt>
-              <dd>{totals.totalCards}</dd>
-            </div>
-            <div className="dashboard-summary__item">
-              <dt>Topics tracked</dt>
-              <dd>{availableTopics.length}</dd>
-            </div>
-            <div className="dashboard-summary__item">
-              <dt>Completion</dt>
-              <dd>{completionRate}%</dd>
-            </div>
-          </dl>
+
+            <dl className="dashboard-summary">
+              <div className="dashboard-summary__item">
+                <dt>Cards learned</dt>
+                <dd>{totals.learnedCards}</dd>
+              </div>
+              <div className="dashboard-summary__item">
+                <dt>Total cards</dt>
+                <dd>{totals.totalCards}</dd>
+              </div>
+              <div className="dashboard-summary__item">
+                <dt>Topics tracked</dt>
+                <dd>{availableTopics.length}</dd>
+              </div>
+              <div className="dashboard-summary__item">
+                <dt>Completion</dt>
+                <dd>{completionRate}%</dd>
+              </div>
+            </dl>
+          </div>
         </Card>
       </section>
 
@@ -355,7 +374,10 @@ interface DashboardStatProps {
 function DashboardStat({ label, value, detail, tone }: DashboardStatProps) {
   return (
     <article className={`dashboard-stat dashboard-stat--${tone}`}>
-      <p className="dashboard-stat__label">{label}</p>
+      <div className="dashboard-stat__head">
+        <p className="dashboard-stat__label">{label}</p>
+        <span className="dashboard-stat__icon" aria-hidden="true" />
+      </div>
       <p className="dashboard-stat__value">{value}</p>
       <p className="dashboard-stat__detail">{detail}</p>
     </article>

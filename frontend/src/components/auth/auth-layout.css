@@ -32,6 +32,75 @@
   gap: var(--space-4);
 }
 
+.auth-layout__brand::before,
+.auth-layout__brand::after {
+  content: '';
+  position: absolute;
+  border-radius: 100%;
+  pointer-events: none;
+}
+
+.auth-layout__brand::before {
+  width: 240px;
+  height: 240px;
+  top: -115px;
+  right: -86px;
+  background: radial-gradient(circle, rgba(57, 212, 199, 0.26), rgba(57, 212, 199, 0));
+  animation: auth-brand-drift-a 10s ease-in-out infinite;
+}
+
+.auth-layout__brand::after {
+  width: 280px;
+  height: 280px;
+  left: -130px;
+  bottom: -168px;
+  background: radial-gradient(circle, rgba(243, 178, 95, 0.22), rgba(243, 178, 95, 0));
+  animation: auth-brand-drift-b 12s ease-in-out infinite;
+}
+
+.auth-layout__brand > * {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-form .ui-field {
+  gap: 0.4rem;
+}
+
+.auth-form .ui-field__label {
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.auth-form .ui-field:focus-within .ui-field__label {
+  color: #dcfffa;
+  transform: translateX(1px);
+}
+
+.auth-form .ui-input {
+  background: rgba(10, 22, 38, 0.75);
+  border-color: rgba(126, 157, 181, 0.34);
+}
+
+.auth-form .ui-input:hover:not(:disabled) {
+  border-color: rgba(158, 194, 221, 0.48);
+}
+
+.auth-form .ui-input:focus {
+  border-color: rgba(95, 217, 207, 0.86);
+  box-shadow:
+    0 0 0 1px rgba(95, 217, 207, 0.56),
+    0 0 0 5px rgba(95, 217, 207, 0.16);
+}
+
+.auth-form .ui-input--error:focus {
+  border-color: rgba(255, 127, 139, 0.78);
+  box-shadow:
+    0 0 0 1px rgba(255, 127, 139, 0.52),
+    0 0 0 5px rgba(255, 127, 139, 0.14);
+}
+
 .auth-layout__eyebrow {
   margin: 0;
   width: fit-content;
@@ -156,6 +225,32 @@
   line-height: 1.5;
 }
 
+@keyframes auth-brand-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.68;
+  }
+
+  50% {
+    transform: translate3d(-10px, 10px, 0);
+    opacity: 0.84;
+  }
+}
+
+@keyframes auth-brand-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.56;
+  }
+
+  50% {
+    transform: translate3d(12px, -9px, 0);
+    opacity: 0.72;
+  }
+}
+
 @media (max-width: 940px) {
   .auth-layout {
     grid-template-columns: 1fr;
@@ -176,6 +271,11 @@
 @media (max-width: 620px) {
   .auth-layout {
     border-radius: var(--radius-lg);
+  }
+
+  .auth-layout__brand::before,
+  .auth-layout__brand::after {
+    animation: none;
   }
 
   .auth-form button {

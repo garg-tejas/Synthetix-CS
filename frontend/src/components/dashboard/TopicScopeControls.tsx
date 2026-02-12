@@ -100,6 +100,7 @@ export default function TopicScopeControls({
         <div className="dashboard-scope__chips">
           {availableTopics.map((topicName) => {
             const isSelected = selectedTopics.includes(topicName)
+            const isDue = dueTopicNames.includes(topicName)
             return (
               <button
                 key={topicName}
@@ -107,10 +108,11 @@ export default function TopicScopeControls({
                 aria-pressed={isSelected}
                 disabled={isBusy}
                 onClick={() => onToggleTopic(topicName)}
-                className={`dashboard-scope__chip${isSelected ? ' dashboard-scope__chip--active' : ''}`}
+                className={`dashboard-scope__chip${isSelected ? ' dashboard-scope__chip--active' : ''}${isDue ? ' dashboard-scope__chip--due' : ''}`}
               >
                 <span className="dashboard-scope__chip-dot" aria-hidden="true" />
-                {topicName}
+                <span className="dashboard-scope__chip-label">{topicName}</span>
+                {isDue ? <span className="dashboard-scope__chip-tag">due</span> : null}
               </button>
             )
           })}
