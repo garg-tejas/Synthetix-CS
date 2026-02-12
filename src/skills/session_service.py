@@ -73,6 +73,7 @@ class QuizSessionService:
         limit: int = 20,
         topics: Optional[List[str]] = None,
         subject: Optional[str] = None,
+        path_topics_ordered: Optional[List[str]] = None,
     ) -> QuizSessionState:
         card_query = select(Card).join(Topic).options(selectinload(Card.topic))
         if topics:
@@ -124,10 +125,25 @@ class QuizSessionService:
             subject=subject,
             topic_keys=[card.topic_key for card in cards if card.topic_key],
         )
-        path_rank = {
-            node.topic_key: index
-            for index, node in enumerate(path_nodes)
-        }
+        # Build path_rank: topic_key (lowercase) -> index in learning path.
+        # Prefer explicit path_topics_ordered from client when provided.
+        if path_topics_ordered and len(path_topics_ordered) > 0:
+            path_rank = {
+                tk.strip().lower(): idx
+                for idx, tk in enumerate(path_topics_ordered)
+                if tk and str(tk).strip()
+            }
+        else:
+            path_rank = {
+                node.topic_key.strip().lower(): idx
+                for idx, node in enumerate(path_nodes)
+            }
+
+        def _card_path_rank(card: Card) -> int:
+            topic_key = (card.topic_key or "").strip().lower()
+            if not topic_key and card.topic:
+                topic_key = (getattr(card.topic, "name", "") or "").strip().lower()
+            return path_rank.get(topic_key, len(path_rank))
 
         selected = self.quiz_service.get_next_cards(
             user_id=user_id,
@@ -138,7 +154,7 @@ class QuizSessionService:
         )
         selected.sort(
             key=lambda card: (
-                path_rank.get((card.topic_key or "").lower(), len(path_rank)),
+                _card_path_rank(card),
                 card.id,
             )
         )

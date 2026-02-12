@@ -232,7 +232,14 @@ export default function ReviewPage() {
         const topics = orderedTopics.length > 0 ? orderedTopics : undefined
         const subject = routeState?.subject || undefined
         const requestedLimit = typeof routeState?.limit === 'number' ? clampLimit(routeState.limit) : 10
-        const data = await startQuizSession({ limit: requestedLimit, topics, subject })
+        const pathTopicsOrdered =
+          orderedTopics.length > 0 ? orderedTopics : undefined
+        const data = await startQuizSession({
+          limit: requestedLimit,
+          topics,
+          subject,
+          path_topics_ordered: pathTopicsOrdered,
+        })
         if (cancelled) return
         sessionClosedRef.current = false
         setSessionId(data.session_id)

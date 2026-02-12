@@ -191,6 +191,7 @@ async def start_quiz_session(
         limit=payload.limit,
         topics=payload.topics,
         subject=payload.subject,
+        path_topics_ordered=payload.path_topics_ordered,
     )
     _quiz_sessions_store(request)[state.session_id] = state
 

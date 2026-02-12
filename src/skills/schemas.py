@@ -56,7 +56,7 @@ class SessionProgress(BaseModel):
 class QuizSessionStartRequest(BaseModel):
     topics: Optional[List[str]] = Field(
         default=None,
-        description="Optional list of topic names to scope this session",
+        description="Optional list of topic names/topic_keys to scope this session",
     )
     subject: Optional[str] = Field(
         default=None,
@@ -67,6 +67,11 @@ class QuizSessionStartRequest(BaseModel):
         ge=1,
         le=100,
         description="Maximum number of cards to include in the session queue",
+    )
+    path_topics_ordered: Optional[List[str]] = Field(
+        default=None,
+        description="Optional ordered list of topic_keys defining learning path sequence. "
+        "When provided, questions are served in this order instead of database/default order.",
     )
 
 

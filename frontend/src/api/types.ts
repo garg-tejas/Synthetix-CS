@@ -62,6 +62,7 @@ export interface QuizSessionStartRequest {
   topics?: string[] | null
   subject?: string | null
   limit?: number
+  path_topics_ordered?: string[] | null
 }
 
 export interface QuizSessionStartResponse {
