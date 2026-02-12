@@ -30,6 +30,36 @@
   animation: motion-rise-fade var(--motion-slow) var(--ease-emphasis) both;
 }
 
+.landing-hero::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(57, 212, 199, 0.6),
+    rgba(243, 178, 95, 0.5),
+    rgba(57, 212, 199, 0.6)
+  );
+  background-size: 200% 100%;
+  animation: landing-border-shift 4s linear infinite;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero::before {
+    animation: none;
+  }
+}
+
 .landing-hero__glow {
   position: absolute;
   pointer-events: none;
@@ -188,6 +218,7 @@
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
 }
 
