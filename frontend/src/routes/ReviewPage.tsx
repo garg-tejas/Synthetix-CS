@@ -419,7 +419,7 @@ export default function ReviewPage() {
       ) : null}
 
       {!isLoading && !error && currentCard ? (
-        <section className="review-workspace">
+        <section className="review-workspace" key={`${currentCard.card_id}-${displayedIndex}`}>
           <Card
             className="review-question"
             tone="default"

@@ -16,6 +16,14 @@ interface FeedbackPanelProps {
 
 type FeedbackTone = 'info' | 'success' | 'warning' | 'danger'
 
+function normalizeLabel(value: string): string {
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
 export default function FeedbackPanel({
   result,
   hasMoreAfterCurrent,
@@ -62,6 +70,8 @@ export default function FeedbackPanel({
     return Math.max(0, Math.min(100, Math.round((result.model_score / 5) * 100)))
   }, [result.model_score])
 
+  const verdictLabel = useMemo(() => normalizeLabel(result.verdict || 'n/a'), [result.verdict])
+
   const nextDueLabel = useMemo(() => {
     if (!result.next_due_at) return null
     const parsed = new Date(result.next_due_at)
@@ -77,7 +87,7 @@ export default function FeedbackPanel({
       kicker="Feedback"
       title="Assessment complete"
       subtitle="Review the feedback, then continue your session."
-      actions={<Badge tone={verdictTone}>{result.verdict ?? 'n/a'}</Badge>}
+      actions={<Badge tone={verdictTone}>{verdictLabel}</Badge>}
     >
       <div className="review-feedback-panel__score">
         <div className="review-feedback-panel__score-meta">
@@ -90,11 +100,6 @@ export default function FeedbackPanel({
           ariaLabel="Model score"
         />
       </div>
-
-      <section className="review-feedback-panel__section">
-        <h4>Reference answer</h4>
-        <p>{result.answer}</p>
-      </section>
 
       {shouldRemediate ? (
         <section className="review-feedback-panel__section">
@@ -117,6 +122,11 @@ export default function FeedbackPanel({
           )}
         </section>
       ) : null}
+
+      <section className="review-feedback-panel__section review-feedback-panel__section--reference">
+        <h4>Reference answer</h4>
+        <p>{result.answer}</p>
+      </section>
 
       {result.show_source_context && result.explanation ? (
         <details className="review-feedback-panel__context">

@@ -7,6 +7,7 @@
   overflow: hidden;
   display: grid;
   gap: var(--space-4);
+  justify-items: start;
 }
 
 .review-summary__hero::before {
@@ -20,6 +21,55 @@
 
 .review-summary__hero-progress .ui-progress__track {
   height: 0.58rem;
+}
+
+.review-summary__score-ring {
+  position: relative;
+  width: 7.1rem;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.review-summary__score-ring-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 100%;
+  box-shadow:
+    inset 0 0 0 1px rgba(153, 187, 211, 0.3),
+    0 10px 22px rgba(4, 11, 18, 0.3);
+}
+
+.review-summary__score-ring-track::after {
+  content: '';
+  position: absolute;
+  inset: 0.72rem;
+  border-radius: 100%;
+  background: rgba(8, 16, 24, 0.9);
+  border: 1px solid rgba(126, 157, 181, 0.25);
+}
+
+.review-summary__score-ring-core {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 0.14rem;
+}
+
+.review-summary__score-ring-core strong {
+  color: var(--text-strong);
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  line-height: 1;
+}
+
+.review-summary__score-ring-core span {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .review-summary__hero-metrics {
@@ -76,6 +126,10 @@
 }
 
 @media (max-width: 960px) {
+  .review-summary__score-ring {
+    width: 6.35rem;
+  }
+
   .review-summary__hero-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

@@ -40,6 +40,11 @@ export default function ReviewSummaryPage() {
     return `${summary.averageScore.toFixed(1)}/5`
   }, [summary])
 
+  const averageScorePercent = useMemo(() => {
+    if (!summary || summary.averageScore === null) return 0
+    return Math.max(0, Math.min(100, (summary.averageScore / 5) * 100))
+  }, [summary])
+
   const scoreTone = useMemo<'success' | 'warning' | 'danger'>(() => {
     if (!summary || summary.averageScore === null) return 'warning'
     if (summary.averageScore >= 4) return 'success'
@@ -93,6 +98,23 @@ export default function ReviewSummaryPage() {
         subtitle="Use this signal to choose whether to deepen one topic or expand breadth next."
         actions={<Badge tone={scoreTone}>Avg score {averageScoreLabel}</Badge>}
       >
+        <div
+          className="review-summary__score-ring"
+          role="img"
+          aria-label={`Average score ${averageScoreLabel}`}
+        >
+          <div
+            className="review-summary__score-ring-track"
+            style={{
+              background: `conic-gradient(var(--accent-primary) ${averageScorePercent}%, rgba(126, 157, 181, 0.24) ${averageScorePercent}% 100%)`,
+            }}
+          />
+          <div className="review-summary__score-ring-core">
+            <strong>{averageScoreLabel}</strong>
+            <span>avg score</span>
+          </div>
+        </div>
+
         <div className="review-summary__hero-progress">
           <ProgressBar value={completionPercent} ariaLabel="Session completion" />
         </div>
