@@ -16,8 +16,8 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(36% 54% at 84% 11%, rgba(54, 216, 255, 0.16), transparent 78%),
-    radial-gradient(46% 60% at 18% 92%, rgba(255, 184, 79, 0.14), transparent 76%);
+    radial-gradient(36% 54% at 84% 11%, rgba(57, 212, 199, 0.14), transparent 78%),
+    radial-gradient(46% 60% at 18% 92%, rgba(243, 178, 95, 0.12), transparent 76%);
 }
 
 .auth-layout__brand {
@@ -106,7 +106,7 @@
   width: fit-content;
   padding: 0.34rem 0.6rem;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(54, 216, 255, 0.42);
+  border: 1px solid rgba(57, 212, 199, 0.45);
   color: #bdefff;
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -211,9 +211,9 @@
   margin: 0;
   padding: 0.52rem 0.72rem;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(54, 216, 255, 0.32);
-  background: rgba(17, 72, 93, 0.24);
-  color: #c3f0ff;
+  border: 1px solid rgba(57, 212, 199, 0.35);
+  background: rgba(18, 72, 78, 0.26);
+  color: #c3f7f2;
   font-size: 0.82rem;
   font-family: var(--font-mono);
 }
@@ -280,5 +280,12 @@
 
   .auth-form button {
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-layout__brand::before,
+  .auth-layout__brand::after {
+    animation: none;
   }
 }
