@@ -1,46 +1,34 @@
 # CoreCS Interview Lab
 
-## What this project is
+A full-stack CS interview prep app for OS, DBMS, and CN. It turns textbook chunks into interview-style question cards, grades answers with an LLM pipeline, and serves them via spaced repetition with topic-scoped sessions and a learning path.
 
-`CoreCS Interview Lab` is a full-stack CS interview prep platform for OS, DBMS, and CN.
-It converts textbook chunks into interview-style question cards, scores and filters them with an
-LLM-first pipeline, and serves them through a spaced-repetition quiz app with answer grading.
+## Features
 
-## What exists today
+- **Review workspace** — Topic-scoped sessions, per-answer feedback, due/overdue tracking
+- **Learning path** — Node graph with completed/current/unlocked/locked states; questions follow path order
+- **RAG API** — Hybrid retrieval, citation-backed chat and search
+- **Quiz API** — Sessions, grading, and progress persisted in PostgreSQL
+- **Offline pipeline** — Generate, score, validate, and seed cards from chunks
 
-- RAG API with hybrid retrieval and citation-backed responses:
-  `POST /api/search`, `POST /api/chat`, `POST /api/chat/stream`,
-  `GET /api/health`, `GET /api/stats`, `DELETE /api/conversation`
-- Auth API:
-  `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`
-- Quiz API (PostgreSQL-backed):
-  `GET /api/quiz/topics`, `GET /api/quiz/stats`,
-  `POST /api/quiz/sessions/start`,
-  `POST /api/quiz/sessions/{session_id}/answer`,
-  `POST /api/quiz/sessions/{session_id}/finish`
-- Learning path graph scripts:
-  `python -m scripts.build_topic_dependency_graph`,
-  `python -m scripts.sync_topic_dependency_graph`,
-  `python -m scripts.check_learning_path_graph`
-- Offline QA pipeline:
-  generate -> LLM score (`eval.generation.score_questions`) ->
-  validate (`eval.generation.validate_qa`) -> seed cards (`scripts.seed_cards`)
+## API surface
 
-## Repo layout (high level)
+- Auth: `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`
+- RAG: `POST /api/search`, `POST /api/chat`, `POST /api/chat/stream`, `GET /api/health`, `GET /api/stats`
+- Quiz: `GET /api/quiz/topics`, `GET /api/quiz/stats`, `POST /api/quiz/sessions/start`, `POST /api/quiz/sessions/{id}/answer`, `POST /api/quiz/sessions/{id}/finish`
+- Scripts: `python -m scripts.build_topic_dependency_graph`, `scripts.sync_topic_dependency_graph`, `scripts.check_learning_path_graph`
+- Pipeline: `eval.generation` (generate, score, validate) then `scripts.seed_cards`
 
-```text
-src/     API, auth, DB models/session, RAG, generation, orchestrator, LLM client
-eval/    Offline generation/evaluation tooling
-scripts/ Helpers (chunking, preprocessing, seeding)
-frontend/ React app
-docs/    Setup and architecture notes
-tests/   Pytest suite
+## Repo layout
+
+```
+src/       API, auth, DB models, RAG, session service, path planner
+eval/      Offline generation and evaluation
+scripts/   Chunking, preprocessing, seeding
+frontend/  React SPA (Vite, React Router)
+docs/      Setup and architecture
+tests/     Pytest suite
 ```
 
 ## Setup
 
-Use `docs/SETUP.md` for the complete flow:
-- local env + Postgres + migrations
-- QA pipeline (generate -> score -> validate)
-- seeding cards into DB
-- running the API
+See `docs/SETUP.md` for environment setup, migrations, QA pipeline, and running the API.
