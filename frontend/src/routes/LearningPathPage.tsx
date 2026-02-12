@@ -95,6 +95,18 @@ function toTopicLabel(topicKey: string): string {
   return tail.replace(/[-_]/g, ' ')
 }
 
+function uniqueTopicKeys(topicKeys: string[]): string[] {
+  const seen = new Set<string>()
+  const ordered: string[] = []
+  for (const topicKey of topicKeys) {
+    const normalized = topicKey.trim().toLowerCase()
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    ordered.push(normalized)
+  }
+  return ordered
+}
+
 function PathGraph({
   stageNodes,
   displayNameByTopicKey,
@@ -376,17 +388,41 @@ export default function LearningPathPage() {
     [pathNodes],
   )
 
+  const orderedPathTopicKeys = useMemo(
+    () => uniqueTopicKeys(pathNodes.map((node) => node.topic_key)),
+    [pathNodes],
+  )
+
+  const reviewScopeFromPath = useMemo<ReviewSessionScopeState>(
+    () => ({
+      ...nextScopeState,
+      topics: orderedPathTopicKeys.length > 0 ? orderedPathTopicKeys : nextScopeState.topics ?? null,
+      pathTopicsOrdered: orderedPathTopicKeys.length > 0 ? orderedPathTopicKeys : null,
+      preferredTopic: null,
+      source: 'learning-path',
+    }),
+    [nextScopeState, orderedPathTopicKeys],
+  )
+
   const launchNodeReview = useCallback(
     (stage: PathStageNode) => {
       if (stage.status === 'locked') return
+      const preferredTopic = stage.node.topic_key.trim().toLowerCase()
+      const orderedTopics =
+        preferredTopic.length > 0
+          ? [preferredTopic, ...orderedPathTopicKeys.filter((topicKey) => topicKey !== preferredTopic)]
+          : orderedPathTopicKeys
+
       navigate('/review', {
         state: {
-          ...nextScopeState,
-          topics: [stage.node.topic_key],
+          ...reviewScopeFromPath,
+          topics: orderedTopics.length > 0 ? orderedTopics : reviewScopeFromPath.topics ?? null,
+          pathTopicsOrdered: orderedTopics.length > 0 ? orderedTopics : null,
+          preferredTopic: preferredTopic || null,
         },
       })
     },
-    [navigate, nextScopeState],
+    [navigate, orderedPathTopicKeys, reviewScopeFromPath],
   )
 
   return (
@@ -589,7 +625,7 @@ export default function LearningPathPage() {
               size="lg"
               onClick={() =>
                 navigate('/review', {
-                  state: nextScopeState,
+                  state: reviewScopeFromPath,
                 })
               }
             >

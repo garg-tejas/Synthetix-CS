@@ -25,6 +25,20 @@
   position: relative;
 }
 
+.review-question__path-position {
+  margin: 0 0 var(--space-3);
+  width: fit-content;
+  padding: 0.34rem 0.62rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(118, 200, 192, 0.42);
+  background: rgba(21, 58, 64, 0.4);
+  color: #d2fbf5;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .review-question::after {
   content: '';
   position: absolute;

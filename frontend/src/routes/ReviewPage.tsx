@@ -24,6 +24,12 @@ interface SessionAttemptSnapshot {
   topic: string
 }
 
+interface PathPosition {
+  index: number
+  total: number
+  label: string
+}
+
 function normalizeVerdictBucket(value: string | null | undefined): VerdictBucket {
   const normalized = (value || '').trim().toLowerCase()
   if (normalized.includes('partial')) return 'partially_correct'
@@ -35,9 +41,77 @@ function clampLimit(value: number): number {
   return Math.max(1, Math.min(100, Math.round(value)))
 }
 
+function normalizeTopicToken(value: string | null | undefined): string {
+  return (value || '').trim().toLowerCase()
+}
+
+function toTopicSlug(value: string): string {
+  return value.replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+}
+
+function uniqueTopics(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>()
+  const ordered: string[] = []
+  for (const value of values) {
+    const raw = (value || '').trim()
+    const normalized = normalizeTopicToken(raw)
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    ordered.push(raw)
+  }
+  return ordered
+}
+
+function reorderTopicsByPreferred(topics: string[], preferredTopic: string): string[] {
+  if (!preferredTopic) return topics
+  const preferred = topics.find((topic) => normalizeTopicToken(topic) === preferredTopic)
+  if (!preferred) return topics
+  return [preferred, ...topics.filter((topic) => normalizeTopicToken(topic) !== preferredTopic)]
+}
+
+function toPathTopicLabel(topicKey: string): string {
+  const tail = topicKey.split(':').pop() || topicKey
+  return tail
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function resolvePathTopicIndex(currentTopic: string, orderedPathTopics: string[]): number {
+  const topicToken = normalizeTopicToken(currentTopic)
+  if (!topicToken || orderedPathTopics.length === 0) return -1
+  const topicSlug = toTopicSlug(topicToken)
+
+  for (let index = 0; index < orderedPathTopics.length; index += 1) {
+    const candidate = normalizeTopicToken(orderedPathTopics[index])
+    const candidateTail = candidate.split(':').pop() || candidate
+    const candidateTailSpaced = candidateTail.replace(/[-_]+/g, ' ').trim()
+    if (
+      topicToken === candidate ||
+      topicToken === candidateTail ||
+      topicToken === candidateTailSpaced
+    ) {
+      return index
+    }
+
+    const candidateSlug = toTopicSlug(candidate)
+    const candidateTailSlug = toTopicSlug(candidateTail)
+    if (
+      topicSlug.length > 0 &&
+      (topicSlug === candidateSlug || topicSlug === candidateTailSlug)
+    ) {
+      return index
+    }
+  }
+
+  return -1
+}
+
 export default function ReviewPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const routeState = (location.state as ReviewSessionScopeState | null) ?? null
 
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [currentCard, setCurrentCard] = useState<QuizCard | null>(null)
@@ -55,6 +129,29 @@ export default function ReviewPage() {
 
   const sessionIdRef = useRef<string | null>(null)
   const sessionClosedRef = useRef(false)
+
+  const orderedTopics = useMemo(() => {
+    const fromPath = uniqueTopics(routeState?.pathTopicsOrdered ?? [])
+    const fromScope = uniqueTopics(routeState?.topics ?? [])
+    const preferredTopic = normalizeTopicToken(routeState?.preferredTopic)
+
+    const baseline = fromPath.length > 0 ? fromPath : fromScope
+    return reorderTopicsByPreferred(baseline, preferredTopic)
+  }, [routeState?.pathTopicsOrdered, routeState?.preferredTopic, routeState?.topics])
+
+  const pathTopics = useMemo(() => {
+    if (routeState?.source !== 'learning-path') return []
+    const fromPath = uniqueTopics(routeState?.pathTopicsOrdered ?? [])
+    const fallback = uniqueTopics(routeState?.topics ?? [])
+    const preferredTopic = normalizeTopicToken(routeState?.preferredTopic)
+    const baseline = fromPath.length > 0 ? fromPath : fallback
+    return reorderTopicsByPreferred(baseline, preferredTopic)
+  }, [
+    routeState?.pathTopicsOrdered,
+    routeState?.preferredTopic,
+    routeState?.source,
+    routeState?.topics,
+  ])
 
   useEffect(() => {
     sessionIdRef.current = sessionId
@@ -132,10 +229,9 @@ export default function ReviewPage() {
       setUserAnswer('')
       setSessionAttempts([])
       try {
-        const state = location.state as ReviewSessionScopeState | null
-        const topics = state?.topics && state.topics.length ? state.topics : undefined
-        const subject = state?.subject || undefined
-        const requestedLimit = typeof state?.limit === 'number' ? clampLimit(state.limit) : 10
+        const topics = orderedTopics.length > 0 ? orderedTopics : undefined
+        const subject = routeState?.subject || undefined
+        const requestedLimit = typeof routeState?.limit === 'number' ? clampLimit(routeState.limit) : 10
         const data = await startQuizSession({ limit: requestedLimit, topics, subject })
         if (cancelled) return
         sessionClosedRef.current = false
@@ -161,7 +257,7 @@ export default function ReviewPage() {
     return () => {
       cancelled = true
     }
-  }, [location.state])
+  }, [orderedTopics, routeState?.limit, routeState?.subject])
 
   useEffect(() => {
     return () => {
@@ -241,6 +337,17 @@ export default function ReviewPage() {
 
   const hasMoreAfterCurrent = useMemo(() => Boolean(result?.next_card), [result])
   const totalCards = progress?.total ?? 0
+  const pathPosition = useMemo<PathPosition | null>(() => {
+    if (!currentCard || pathTopics.length === 0) return null
+    const matchIndex = resolvePathTopicIndex(currentCard.topic, pathTopics)
+    if (matchIndex < 0) return null
+    const matchedTopic = pathTopics[matchIndex]
+    return {
+      index: matchIndex,
+      total: pathTopics.length,
+      label: toPathTopicLabel(matchedTopic),
+    }
+  }, [currentCard, pathTopics])
 
   return (
     <div className="review layout-stack layout-stack--lg">
@@ -320,6 +427,11 @@ export default function ReviewPage() {
             kicker={`Topic: ${currentCard.topic}`}
             title="Question"
           >
+            {pathPosition ? (
+              <p className="review-question__path-position">
+                Node {pathPosition.index + 1} of {pathPosition.total}: {pathPosition.label}
+              </p>
+            ) : null}
             <p className="review-question__text">{currentCard.question}</p>
             <p className="review-question__hint">
               Explain your answer clearly. Use precise terms where possible.
