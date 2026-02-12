@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 
 import { cx } from '../ui/cx'
 
@@ -17,13 +17,44 @@ export default function AppShell({
   width = 'content',
   children,
 }: AppShellProps) {
+  const location = useLocation()
+  const breadcrumb = resolveBreadcrumbLabel(location.pathname)
+
   return (
     <div className={cx('app-shell', `app-shell--${mode}`)}>
       <div className="app-shell__orb app-shell__orb--a" aria-hidden="true" />
       <div className="app-shell__orb app-shell__orb--b" aria-hidden="true" />
+      {mode === 'workspace' ? (
+        <header className={cx('app-shell__nav', `app-shell__nav--${width}`)}>
+          <Link to="/" className="app-shell__brand">
+            <span className="app-shell__brand-mark" aria-hidden="true" />
+            Signal Lab
+          </Link>
+          <p className="app-shell__crumb" aria-live="polite">
+            {breadcrumb}
+          </p>
+        </header>
+      ) : null}
       <main className={cx('app-shell__content', `app-shell__content--${width}`)}>
         {children ?? <Outlet />}
       </main>
     </div>
   )
+}
+
+function resolveBreadcrumbLabel(pathname: string): string {
+  const labelByPathname: Record<string, string> = {
+    '/': 'Landing',
+    '/dashboard': 'Dashboard',
+    '/review/setup': 'Review Setup',
+    '/review/path': 'Learning Path',
+    '/review': 'Review Workspace',
+    '/review/summary': 'Session Summary',
+    '/login': 'Login',
+    '/signup': 'Signup',
+  }
+
+  if (labelByPathname[pathname]) return labelByPathname[pathname]
+  if (pathname.startsWith('/review')) return 'Review'
+  return 'Workspace'
 }

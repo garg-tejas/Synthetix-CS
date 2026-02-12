@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../auth/AuthContext'
 import Badge from '../components/ui/Badge'
@@ -69,10 +69,10 @@ export default function LandingPage() {
         <div className="landing-hero__glow landing-hero__glow--b" aria-hidden="true" />
 
         <header className="landing-hero__topbar">
-          <Link to="/" className="landing-hero__brand">
+          <p className="landing-hero__mode">
             <span className="landing-hero__brand-mark" aria-hidden="true" />
-            Signal Lab
-          </Link>
+            Quiet Signal workflow
+          </p>
           <div className="landing-hero__topbar-actions">
             <Badge tone={status === 'authenticated' ? 'success' : 'info'}>
               {status === 'authenticated'
