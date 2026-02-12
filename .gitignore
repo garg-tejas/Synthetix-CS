@@ -27,3 +27,11 @@ frontend/node_modules/
 frontend/dist/
 frontend/.env
 frontend/.env.local
+
+# Evaluation artifacts (keep only canonical topic graph outputs in git)
+eval/generation/output/*
+!eval/generation/output/generated_questions.validated.jsonl
+!eval/generation/output/topic_graph.validated.json
+!eval/generation/output/topic_graph.os.validated.json
+!eval/generation/output/topic_graph.dbms.validated.json
+!eval/generation/output/topic_graph.cn.validated.json

@@ -12,6 +12,7 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   actions?: ReactNode
   tone?: CardTone
   padding?: CardPadding
+  interactive?: boolean
 }
 
 export default function Card({
@@ -21,6 +22,7 @@ export default function Card({
   actions,
   tone = 'default',
   padding = 'md',
+  interactive = false,
   className,
   children,
   ...rest
@@ -31,6 +33,7 @@ export default function Card({
         'ui-card',
         `ui-card--${tone}`,
         `ui-card--pad-${padding}`,
+        interactive && 'ui-card--interactive',
         className,
       )}
       {...rest}

@@ -1,11 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@10..48,400;10..48,500;10..48,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   color-scheme: dark;
 
-  --font-display: 'Bricolage Grotesque', 'Trebuchet MS', sans-serif;
-  --font-body: 'IBM Plex Sans', 'Segoe UI', sans-serif;
-  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+  --font-display: 'Satoshi', 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-body: 'Satoshi', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', Consolas, monospace;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -21,29 +22,30 @@
   --radius-lg: 1rem;
   --radius-pill: 999px;
 
-  --surface-canvas: #050b17;
-  --surface-0: rgba(10, 18, 35, 0.93);
-  --surface-1: rgba(15, 25, 46, 0.95);
-  --surface-2: rgba(23, 36, 60, 0.97);
-  --surface-inset: rgba(7, 14, 28, 0.92);
+  --surface-canvas: #070d14;
+  --surface-0: rgba(20, 28, 37, 0.72);
+  --surface-1: rgba(15, 23, 33, 0.9);
+  --surface-2: rgba(22, 32, 44, 0.97);
+  --surface-inset: rgba(20, 28, 37, 0.78);
 
-  --border-soft: rgba(110, 159, 207, 0.26);
-  --border-strong: rgba(149, 194, 240, 0.4);
+  --border-soft: rgba(126, 157, 181, 0.2);
+  --border-strong: rgba(158, 194, 221, 0.34);
 
-  --text-strong: #f3f7ff;
-  --text-body: #d8e3f6;
-  --text-muted: #b0c0d8;
+  --text-strong: #f2f7fa;
+  --text-body: #d8e2ea;
+  --text-muted: #9fb0bf;
 
-  --accent-primary: #36d8ff;
-  --accent-primary-strong: #00b6e8;
-  --accent-secondary: #ffb84f;
-  --accent-secondary-strong: #ff9630;
-  --danger-strong: #ff6f7d;
+  --accent-primary: #39d4c7;
+  --accent-primary-strong: #20b8ab;
+  --accent-secondary: #f3b25f;
+  --accent-secondary-strong: #de9640;
+  --danger-strong: #ff7f8b;
 
-  --shadow-elev-1: 0 10px 30px rgba(1, 8, 23, 0.35);
-  --shadow-elev-2: 0 14px 38px rgba(2, 10, 28, 0.46);
-  --shadow-focus: 0 0 0 2px rgba(54, 216, 255, 0.28);
-  --shadow-focus-strong: 0 0 0 2px rgba(9, 20, 36, 0.8), 0 0 0 4px rgba(54, 216, 255, 0.58);
+  --shadow-elev-1: 0 14px 34px rgba(3, 9, 17, 0.3);
+  --shadow-elev-2: 0 20px 45px rgba(2, 8, 15, 0.44);
+  --shadow-focus: 0 0 0 2px rgba(57, 212, 199, 0.28);
+  --shadow-focus-strong: 0 0 0 2px rgba(8, 16, 24, 0.9), 0 0 0 4px rgba(57, 212, 199, 0.52);
+  --surface-backdrop-blur: blur(10px);
 
   --motion-fast: 160ms;
   --motion-base: 240ms;
@@ -52,11 +54,11 @@
   --ease-emphasis: cubic-bezier(0.16, 0.84, 0.3, 1);
 
   --gradient-canvas:
-    radial-gradient(120% 95% at 8% 4%, rgba(41, 84, 153, 0.42) 0%, rgba(41, 84, 153, 0) 58%),
-    radial-gradient(70% 80% at 88% 12%, rgba(34, 174, 212, 0.22) 0%, rgba(34, 174, 212, 0) 62%),
-    linear-gradient(165deg, #070f20 0%, #030915 55%, #02060f 100%);
+    radial-gradient(110% 90% at 10% 4%, rgba(54, 212, 199, 0.16) 0%, rgba(54, 212, 199, 0) 58%),
+    radial-gradient(75% 80% at 84% 8%, rgba(243, 178, 95, 0.12) 0%, rgba(243, 178, 95, 0) 68%),
+    linear-gradient(164deg, #0b131d 0%, #060b12 54%, #04080d 100%);
 
-  --gradient-accent: linear-gradient(110deg, #36d8ff 0%, #20bded 42%, #ffb84f 100%);
+  --gradient-accent: linear-gradient(110deg, #39d4c7 0%, #24c3b5 44%, #f3b25f 100%);
   --grain-noise:
     repeating-linear-gradient(
       45deg,
@@ -73,7 +75,7 @@
   --card-soft: var(--surface-0);
   --border-subtle: var(--border-soft);
   --accent: var(--accent-primary);
-  --accent-soft: rgba(54, 216, 255, 0.18);
+  --accent-soft: rgba(57, 212, 199, 0.2);
   --accent-strong: var(--accent-secondary-strong);
   --text: var(--text-body);
   --muted: var(--text-muted);

@@ -17,7 +17,7 @@ html {
 body {
   margin: 0;
   font-family: var(--font-body);
-  line-height: 1.5;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -31,7 +31,7 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: 0.35;
+  opacity: 0.24;
   background: var(--grain-noise);
 }
 
@@ -43,7 +43,7 @@ h5,
 h6 {
   margin: 0;
   font-family: var(--font-display);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   color: var(--text-strong);
 }
 
@@ -63,10 +63,10 @@ select {
 
 button {
   border-radius: var(--radius-pill);
-  border: 1px solid transparent;
+  border: 1px solid rgba(57, 212, 199, 0.3);
   background: var(--accent);
-  color: #031326;
-  box-shadow: 0 10px 25px rgba(54, 216, 255, 0.3);
+  color: #07131b;
+  box-shadow: 0 10px 24px rgba(8, 24, 33, 0.28);
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
@@ -76,9 +76,9 @@ button {
 
 button:hover:not(:disabled) {
   background: var(--accent-strong);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(235, 246, 255, 0.26);
   transform: translateY(-1px);
-  box-shadow: 0 14px 34px rgba(255, 150, 48, 0.35);
+  box-shadow: 0 14px 30px rgba(6, 20, 27, 0.34);
 }
 
 button:focus-visible {
@@ -103,7 +103,7 @@ a:hover {
 }
 
 a:focus-visible {
-  outline: 2px solid rgba(54, 216, 255, 0.64);
+  outline: 2px solid rgba(57, 212, 199, 0.66);
   outline-offset: 2px;
   text-decoration: underline;
 }
@@ -117,15 +117,15 @@ table {
 }
 
 thead {
-  background: rgba(15, 25, 46, 0.9);
+  background: rgba(20, 30, 42, 0.9);
 }
 
 tbody tr:nth-child(even) {
-  background: rgba(15, 25, 46, 0.68);
+  background: rgba(20, 30, 42, 0.66);
 }
 
 tbody tr:hover {
-  background: rgba(21, 34, 58, 0.95);
+  background: rgba(24, 36, 50, 0.92);
 }
 
 input,
@@ -149,11 +149,11 @@ textarea:focus {
 }
 
 :where(a, button, input, textarea, select, summary, [role='button']):focus-visible {
-  outline: 2px solid rgba(54, 216, 255, 0.64);
+  outline: 2px solid rgba(57, 212, 199, 0.66);
   outline-offset: 2px;
 }
 
 ::selection {
-  color: #00111f;
-  background: rgba(54, 216, 255, 0.74);
+  color: #021016;
+  background: rgba(57, 212, 199, 0.72);
 }
