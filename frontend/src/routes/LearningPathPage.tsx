@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { type CSSProperties, useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import type { ApiError } from '../api/client'
@@ -14,6 +14,7 @@ import './learning-path.css'
 
 type SWOTBucket = 'strength' | 'weakness' | 'opportunity' | 'threat'
 type PathStatus = 'completed' | 'current' | 'upcoming' | 'locked'
+type GraphNodeStatus = 'completed' | 'current' | 'unlocked' | 'locked'
 
 interface PathStageNode {
   node: LearningPathNode
@@ -48,11 +49,38 @@ function emptyBuckets(): Record<SWOTBucket, LearningPathNode[]> {
   }
 }
 
-function statusTone(status: PathStatus): 'neutral' | 'info' | 'success' | 'warning' {
+interface PathGraphProps {
+  stageNodes: PathStageNode[]
+  displayNameByTopicKey: Map<string, string>
+  onSelectNode: (stage: PathStageNode) => void
+}
+
+function toGraphStatus(status: PathStatus): GraphNodeStatus {
+  if (status === 'upcoming') return 'unlocked'
+  return status
+}
+
+function graphStatusTone(
+  status: GraphNodeStatus,
+): 'neutral' | 'info' | 'success' | 'warning' {
   if (status === 'completed') return 'success'
   if (status === 'current') return 'info'
-  if (status === 'upcoming') return 'warning'
+  if (status === 'unlocked') return 'warning'
   return 'neutral'
+}
+
+function graphStatusLabel(status: GraphNodeStatus): string {
+  if (status === 'completed') return 'completed'
+  if (status === 'current') return 'current'
+  if (status === 'unlocked') return 'unlocked'
+  return 'locked'
+}
+
+function graphStatusGlyph(status: GraphNodeStatus): string {
+  if (status === 'completed') return 'C'
+  if (status === 'current') return 'N'
+  if (status === 'unlocked') return 'U'
+  return 'L'
 }
 
 function swotTone(bucket: SWOTBucket): 'neutral' | 'info' | 'success' | 'warning' | 'danger' {
@@ -65,6 +93,159 @@ function swotTone(bucket: SWOTBucket): 'neutral' | 'info' | 'success' | 'warning
 function toTopicLabel(topicKey: string): string {
   const tail = topicKey.split(':').pop() || topicKey
   return tail.replace(/[-_]/g, ' ')
+}
+
+function PathGraph({
+  stageNodes,
+  displayNameByTopicKey,
+  onSelectNode,
+}: PathGraphProps) {
+  const rowHeight = 112
+  const rowTopOffset = 56
+  const leftX = 26
+  const rightX = 74
+
+  const connectors = useMemo(() => {
+    const points = stageNodes.map((stage, index) => ({
+      stage,
+      x: index % 2 === 0 ? leftX : rightX,
+      y: rowTopOffset + index * rowHeight,
+    }))
+    const height = points.length > 0 ? points[points.length - 1].y + rowTopOffset : 112
+    const paths = points.slice(1).map((point, index) => {
+      const previousPoint = points[index]
+      const midY = (previousPoint.y + point.y) / 2
+      const targetStatus = toGraphStatus(point.stage.status)
+      let tone: 'locked' | 'progress' | 'complete' = 'progress'
+      if (targetStatus === 'locked') {
+        tone = 'locked'
+      } else if (
+        toGraphStatus(previousPoint.stage.status) === 'completed' &&
+        targetStatus === 'completed'
+      ) {
+        tone = 'complete'
+      }
+
+      return {
+        key: `${index}-${point.stage.node.topic_key}`,
+        tone,
+        d: `M ${previousPoint.x} ${previousPoint.y} C ${previousPoint.x} ${midY}, ${point.x} ${midY}, ${point.x} ${point.y}`,
+      }
+    })
+
+    return { height, paths }
+  }, [stageNodes])
+
+  const graphStyle = useMemo(
+    () =>
+      ({
+        '--graph-row-count': String(Math.max(stageNodes.length, 1)),
+      }) as CSSProperties,
+    [stageNodes.length],
+  )
+
+  return (
+    <div className="learning-path__graph" style={graphStyle}>
+      <svg
+        className="learning-path__graph-connectors"
+        viewBox={`0 0 100 ${connectors.height}`}
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        {connectors.paths.map((connector) => (
+          <path
+            key={connector.key}
+            d={connector.d}
+            className={`learning-path__graph-connector learning-path__graph-connector--${connector.tone}`}
+          />
+        ))}
+      </svg>
+
+      <ol className="learning-path__graph-list">
+        {stageNodes.map((stage) => {
+          const graphStatus = toGraphStatus(stage.status)
+          const lane = stage.index % 2 === 0 ? 'left' : 'right'
+          const isLocked = graphStatus === 'locked'
+          const isActionable = !isLocked
+          const prerequisiteLabels = stage.node.prerequisite_topic_keys.map(
+            (topicKey) => displayNameByTopicKey.get(topicKey) || toTopicLabel(topicKey),
+          )
+          const unresolvedLabels = stage.unresolvedPrerequisiteKeys.map(
+            (topicKey) => displayNameByTopicKey.get(topicKey) || toTopicLabel(topicKey),
+          )
+          const lockHintText =
+            unresolvedLabels.length > 0
+              ? `Requires: ${unresolvedLabels.join(', ')}`
+              : undefined
+          const cardClassName = [
+            'learning-path__graph-card',
+            `learning-path__graph-card--${graphStatus}`,
+            isActionable ? 'learning-path__graph-card--actionable' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
+
+          const cardBody = (
+            <>
+              <div className="learning-path__graph-card-head">
+                <strong>{stage.node.display_name}</strong>
+                <Badge tone={graphStatusTone(graphStatus)}>{graphStatusLabel(graphStatus)}</Badge>
+              </div>
+              <p className="learning-path__graph-meta">
+                {stage.node.subject.toUpperCase()} | mastery {Math.round(stage.node.mastery_score)}
+                {' '}| priority {stage.node.priority_score.toFixed(1)}
+              </p>
+              {prerequisiteLabels.length > 0 ? (
+                <p className="learning-path__prereq-note">Requires: {prerequisiteLabels.join(', ')}</p>
+              ) : null}
+              {isLocked && unresolvedLabels.length > 0 ? (
+                <p className="learning-path__lock-note">
+                  Locked by pending prerequisites: {unresolvedLabels.join(', ')}
+                </p>
+              ) : null}
+              {isActionable ? (
+                <p className="learning-path__attempt-note">Click to start review from this node.</p>
+              ) : null}
+            </>
+          )
+
+          return (
+            <li
+              key={`${stage.node.subject}:${stage.node.topic_key}:${stage.index}`}
+              className={`learning-path__graph-row learning-path__graph-row--${lane}`}
+              style={
+                {
+                  '--path-node-index': String(stage.index),
+                } as CSSProperties
+              }
+            >
+              <div
+                className={`learning-path__graph-node learning-path__graph-node--${graphStatus}`}
+                title={isLocked ? lockHintText : undefined}
+                aria-label={`${stage.node.display_name} ${graphStatusLabel(graphStatus)} node`}
+              >
+                <span>{graphStatusGlyph(graphStatus)}</span>
+              </div>
+
+              {isActionable ? (
+                <button
+                  type="button"
+                  className={cardClassName}
+                  onClick={() => onSelectNode(stage)}
+                >
+                  {cardBody}
+                </button>
+              ) : (
+                <div className={cardClassName} title={lockHintText}>
+                  {cardBody}
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
 }
 
 export default function LearningPathPage() {
@@ -195,6 +376,19 @@ export default function LearningPathPage() {
     [pathNodes],
   )
 
+  const launchNodeReview = useCallback(
+    (stage: PathStageNode) => {
+      if (stage.status === 'locked') return
+      navigate('/review', {
+        state: {
+          ...nextScopeState,
+          topics: [stage.node.topic_key],
+        },
+      })
+    },
+    [navigate, nextScopeState],
+  )
+
   return (
     <div className="learning-path layout-stack layout-stack--lg">
       <PageHeader
@@ -293,39 +487,20 @@ export default function LearningPathPage() {
               padding="lg"
               className="learning-path__sequence"
               kicker="Path sequence"
-              title="Current and upcoming nodes"
-              subtitle="Locks are based on actual prerequisite edges from topic dependency graph."
+              title="Node graph"
+              subtitle="Unlocked nodes are interactive. Locked nodes show unmet prerequisites."
             >
-              <ol className="learning-path__timeline">
-                {stageNodes.slice(0, 8).map((stage) => (
-                  <li key={`${stage.node.subject}:${stage.node.topic_key}:${stage.index}`}>
-                    <div className="learning-path__timeline-head">
-                      <strong>{stage.node.display_name}</strong>
-                      <Badge tone={statusTone(stage.status)}>{stage.status}</Badge>
-                    </div>
-                    <p>
-                      {stage.node.subject.toUpperCase()} | mastery {Math.round(stage.node.mastery_score)}
-                      {' '}| priority {stage.node.priority_score.toFixed(1)}
-                    </p>
-                    {stage.node.prerequisite_topic_keys.length > 0 ? (
-                      <p className="learning-path__prereq-note">
-                        Requires:{' '}
-                        {stage.node.prerequisite_topic_keys
-                          .map((topicKey) => displayNameByTopicKey.get(topicKey) || toTopicLabel(topicKey))
-                          .join(', ')}
-                      </p>
-                    ) : null}
-                    {stage.status === 'locked' ? (
-                      <p className="learning-path__lock-note">
-                        Locked by pending prerequisites:{' '}
-                        {stage.unresolvedPrerequisiteKeys
-                          .map((topicKey) => displayNameByTopicKey.get(topicKey) || toTopicLabel(topicKey))
-                          .join(', ')}
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
+              <div className="learning-path__graph-legend" aria-hidden="true">
+                <Badge tone="success">completed</Badge>
+                <Badge tone="info">current</Badge>
+                <Badge tone="warning">unlocked</Badge>
+                <Badge tone="neutral">locked</Badge>
+              </div>
+              <PathGraph
+                stageNodes={stageNodes}
+                displayNameByTopicKey={displayNameByTopicKey}
+                onSelectNode={launchNodeReview}
+              />
             </Card>
           </section>
 
