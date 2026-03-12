@@ -76,6 +76,7 @@ export interface QuizSessionAnswerRequest {
   card_id: number
   user_answer: string
   response_time_ms?: number | null
+  action?: string | null
 }
 
 export interface QuizSessionAnswerResponse {
@@ -97,6 +98,11 @@ export interface QuizSessionAnswerResponse {
 export interface QuizSessionFinishResponse {
   status: string
   session_id: string
+}
+
+export interface QuizSessionSkipResponse {
+  next_card?: QuizCard | null
+  progress: SessionProgress
 }
 
 export interface TopicStats {

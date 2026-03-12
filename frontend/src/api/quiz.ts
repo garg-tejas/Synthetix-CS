@@ -7,6 +7,7 @@ import type {
   QuizSessionAnswerRequest,
   QuizSessionAnswerResponse,
   QuizSessionFinishResponse,
+  QuizSessionSkipResponse,
   QuizSessionStartRequest,
   QuizSessionStartResponse,
   QuizStatsResponse,
@@ -42,6 +43,14 @@ export async function finishQuizSession(
   sessionId: string
 ): Promise<QuizSessionFinishResponse> {
   return apiRequest<QuizSessionFinishResponse>(`/api/quiz/sessions/${sessionId}/finish`, {
+    method: 'POST',
+  })
+}
+
+export async function skipQuizSession(
+  sessionId: string
+): Promise<QuizSessionSkipResponse> {
+  return apiRequest<QuizSessionSkipResponse>(`/api/quiz/sessions/${sessionId}/skip`, {
     method: 'POST',
   })
 }
