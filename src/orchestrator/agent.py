@@ -66,6 +66,8 @@ class RAGAgent:
         self,
         query: str,
         history: Optional[List[dict]] = None,
+        *,
+        subject: Optional[str] = None,
     ) -> Tuple[Optional[List[RetrievalResult]], Optional[AgentResponse]]:
         """Run analysis and retrieval only. Returns (results, None) or (None, fallback_response)."""
         if history is None and self.memory is not None:
@@ -82,14 +84,17 @@ class RAGAgent:
             )
         effective_query = analysis.reformulated_query or query
         top_k = self.rag_config.top_k
+        search_kwargs: dict = {}
+        if subject:
+            search_kwargs["subject"] = subject
         if analysis.complexity == "multi-part" and len(analysis.sub_queries) >= 2:
             result_lists: List[List[RetrievalResult]] = []
             k_per = max(2, top_k // len(analysis.sub_queries))
             for sq in analysis.sub_queries:
-                result_lists.append(self.retriever.search(sq, k_per))
+                result_lists.append(self.retriever.search(sq, k_per, **search_kwargs))
             results = _merge_results(result_lists, top_k)
         else:
-            results = self.retriever.search(effective_query, top_k)
+            results = self.retriever.search(effective_query, top_k, **search_kwargs)
         if not results:
             return (
                 None,
@@ -105,6 +110,8 @@ class RAGAgent:
         self,
         query: str,
         history: Optional[List[dict]] = None,
+        *,
+        subject: Optional[str] = None,
     ) -> AgentResponse:
         """Analyze query, retrieve (single or multi-hop), generate answer."""
         if history is None and self.memory is not None:
@@ -121,14 +128,17 @@ class RAGAgent:
             return fallback
         effective_query = analysis.reformulated_query or query
         top_k = self.rag_config.top_k
+        search_kwargs: dict = {}
+        if subject:
+            search_kwargs["subject"] = subject
         if analysis.complexity == "multi-part" and len(analysis.sub_queries) >= 2:
             result_lists: List[List[RetrievalResult]] = []
             k_per = max(2, top_k // len(analysis.sub_queries))
             for sq in analysis.sub_queries:
-                result_lists.append(self.retriever.search(sq, k_per))
+                result_lists.append(self.retriever.search(sq, k_per, **search_kwargs))
             results = _merge_results(result_lists, top_k)
         else:
-            results = self.retriever.search(effective_query, top_k)
+            results = self.retriever.search(effective_query, top_k, **search_kwargs)
         if not results:
             no_result = AgentResponse(
                 answer="No relevant passages were found. Try rephrasing your question.",
@@ -157,7 +167,7 @@ class RAGAgent:
                     self.memory.add_turn(query, resp.answer, resp.sources_used)
                 return resp
             top_k = min(top_k + 5, self.rag_config.candidate_k)
-            results = self.retriever.search(effective_query, top_k)
+            results = self.retriever.search(effective_query, top_k, **search_kwargs)
             if not results:
                 return resp
         if self.memory is not None:

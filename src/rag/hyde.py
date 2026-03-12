@@ -26,12 +26,24 @@ class HydeGenerator:
         client = create_client(model_name=model_name, modelscope_token=modelscope_token)
         return cls(client=client)
 
-    def generate_hypothetical_answer(self, query: str) -> str:
+    def generate_hypothetical_answer(
+        self, query: str, *, subject: Optional[str] = None
+    ) -> str:
         """Generate a short hypothetical answer paragraph for the given query."""
+        if subject:
+            preamble = (
+                f'Given the technical question from a {subject} course: "{query}"\n'
+                f"Write a short, textbook-style paragraph from a {subject} chapter that "
+                "directly and precisely answers this question."
+            )
+        else:
+            preamble = (
+                f'Given the technical question: "{query}"\n'
+                "Write a short, textbook-style paragraph that directly and precisely answers "
+                "this question."
+            )
         prompt = (
-            f'Given the technical question: "{query}"\n'
-            "Write a short, textbook-style paragraph that directly and precisely answers "
-            "this question. Focus on the key concepts, definitions, and steps. "
+            f"{preamble} Focus on the key concepts, definitions, and steps. "
             "Limit the answer to 2-3 sentences."
         )
         return self.client.generate_single(

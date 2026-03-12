@@ -59,12 +59,12 @@ class HybridSearcher:
             config = RAGConfig()
         else:
             config = dataclasses.replace(config)
-        
+
         if use_reranker is not None:
             config.use_reranker = use_reranker
         if use_hyde is not None:
             config.use_hyde = use_hyde
-        
+
         bm25 = BM25Index.from_chunks(chunks)
         dense = DenseIndex.from_chunks(chunks)
         reranker = CrossEncoderReranker() if config.use_reranker else None
@@ -90,16 +90,21 @@ class HybridSearcher:
         )
 
     def search(
-        self, query: str, top_k: int | None = None, *, intent=None
+        self,
+        query: str,
+        top_k: int | None = None,
+        *,
+        intent=None,
+        subject: str | None = None,
     ) -> List[RetrievalResult]:
         """
         Search for top-k chunks matching the query.
-        
+
         Implements the Retriever protocol.
         """
         if top_k is None:
             top_k = self.config.top_k
-        
+
         if intent is None:
             intent = analyze(query)
 
@@ -114,9 +119,16 @@ class HybridSearcher:
             dense_query = query
 
         dense_input = dense_query
-        if self.config.use_hyde and self.hyde_generator is not None and not self._hyde_disabled:
+        if (
+            self.config.use_hyde
+            and self.hyde_generator is not None
+            and not self._hyde_disabled
+        ):
             try:
-                hyde_answer = self.hyde_generator.generate_hypothetical_answer(query)
+                hyde_answer = self.hyde_generator.generate_hypothetical_answer(
+                    query,
+                    subject=subject,
+                )
                 if hyde_answer:
                     dense_input = hyde_answer
             except Exception as e:
@@ -131,7 +143,9 @@ class HybridSearcher:
 
         merged = rrf_merge([bm25_ids, dense_ids], k=candidate_k)
 
-        id_to_chunk: Dict[str, ChunkRecord] = {c.id: c for c, _ in bm25_results + dense_results}
+        id_to_chunk: Dict[str, ChunkRecord] = {
+            c.id: c for c, _ in bm25_results + dense_results
+        }
 
         scored: List[Tuple[ChunkRecord, float]] = []
         for cid, score in merged:
@@ -193,12 +207,12 @@ class HybridSearcher:
         else:
             scored.sort(key=lambda x: x[1], reverse=True)
             scored = scored[:top_k]
-        
+
         results: List[RetrievalResult] = []
         for chunk, score in scored:
             source = "reranked" if self.reranker else "hybrid"
             results.append(RetrievalResult(chunk=chunk, score=score, source=source))
-        
+
         return results
 
     def search_raw(
