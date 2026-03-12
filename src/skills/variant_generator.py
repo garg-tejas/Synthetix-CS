@@ -15,6 +15,11 @@ from src.llm import create_client
 
 logger = logging.getLogger(__name__)
 
+try:
+    from eval.generation.interview_quality import assess_interview_quality
+except ImportError:  # pragma: no cover – eval package may not be installed
+    assess_interview_quality = None  # type: ignore[assignment,misc]
+
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL)
 
@@ -146,6 +151,19 @@ class VariantGenerator:
                     canonical_card.id,
                 )
                 return
+
+            # Quality gate: reject variants that fail structural quality checks.
+            if assess_interview_quality is not None:
+                assessment = assess_interview_quality(payload, min_score=50)
+                if not assessment.keep:
+                    logger.info(
+                        "Background variant for card %s rejected by quality gate "
+                        "(score=%d, reasons=%s)",
+                        canonical_card.id,
+                        assessment.score,
+                        assessment.reasons,
+                    )
+                    return
 
             # Import session factory here to avoid circular imports
             from src.db.session import AsyncSessionLocal
