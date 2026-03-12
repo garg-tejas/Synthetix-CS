@@ -68,6 +68,10 @@ class QuizSessionStartRequest(BaseModel):
         le=100,
         description="Maximum number of cards to include in the session queue",
     )
+    difficulty: Optional[str] = Field(
+        default=None,
+        description="Optional difficulty filter: easy, medium, or hard",
+    )
     path_topics_ordered: Optional[List[str]] = Field(
         default=None,
         description="Optional ordered list of topic_keys defining learning path sequence. "

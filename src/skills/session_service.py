@@ -75,6 +75,7 @@ class QuizSessionService:
         limit: int = 20,
         topics: Optional[List[str]] = None,
         subject: Optional[str] = None,
+        difficulty: Optional[str] = None,
         path_topics_ordered: Optional[List[str]] = None,
     ) -> QuizSessionState:
         card_query = select(Card).join(Topic).options(selectinload(Card.topic))
@@ -82,6 +83,8 @@ class QuizSessionService:
             card_query = card_query.where(Topic.name.in_(topics))
         if subject:
             card_query = card_query.where(Topic.name == subject)
+        if difficulty:
+            card_query = card_query.where(Card.difficulty == difficulty)
 
         card_result = await db.execute(card_query)
         cards = card_result.scalars().unique().all()

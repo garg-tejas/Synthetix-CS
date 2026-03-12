@@ -191,6 +191,7 @@ async def start_quiz_session(
         limit=payload.limit,
         topics=payload.topics,
         subject=payload.subject,
+        difficulty=payload.difficulty,
         path_topics_ordered=payload.path_topics_ordered,
     )
     _quiz_sessions_store(request)[state.session_id] = state
@@ -218,7 +219,9 @@ async def answer_quiz_session(
     store = _quiz_sessions_store(request)
     state = store.get(session_id)
     if state is None or state.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
 
     session_service = QuizSessionService(
         chunks_by_id=getattr(request.app.state, "chunks_by_id", {}) or {}
@@ -264,6 +267,8 @@ async def finish_quiz_session(
     store = _quiz_sessions_store(request)
     state = store.get(session_id)
     if state is None or state.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
     store.pop(session_id, None)
     return QuizSessionFinishResponse(status="finished", session_id=session_id)
