@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import json
+import logging
 import re
 from typing import Any, Optional
 
@@ -10,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import Card, ReviewAttempt
 from src.llm import create_client
+
+logger = logging.getLogger(__name__)
 
 
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL)
@@ -58,6 +62,7 @@ def _valid_payload(payload: dict[str, Any], canonical: Card) -> bool:
 class VariantGenerator:
     def __init__(self, *, chunks_by_id: Optional[dict[str, Any]] = None) -> None:
         self.chunks_by_id = chunks_by_id or {}
+        self._pending_tasks: set[asyncio.Task] = set()
 
     async def select_or_create_variant(
         self,
@@ -99,39 +104,82 @@ class VariantGenerator:
             else:
                 chosen = sorted(
                     variants,
-                    key=lambda variant: last_seen.get(variant.id, dt.datetime.min.replace(tzinfo=dt.timezone.utc)),
+                    key=lambda variant: last_seen.get(
+                        variant.id, dt.datetime.min.replace(tzinfo=dt.timezone.utc)
+                    ),
                 )[0]
             if chosen.topic is None and canonical_card.topic is not None:  # type: ignore[union-attr]
                 chosen.topic = canonical_card.topic  # type: ignore[assignment]
             return chosen
 
-        payload = self._generate_variant_payload(canonical_card)
-        if payload is None:
-            return canonical_card
-
-        variant = Card(
-            topic_id=canonical_card.topic_id,
-            question=payload["query"],
-            answer=payload["answer"],
-            difficulty=payload["difficulty"],
-            question_type=payload["question_type"],
-            source_chunk_id=canonical_card.source_chunk_id,
-            tags=canonical_card.tags,
-            topic_key=canonical_card.topic_key,
-            variant_of_card_id=canonical_card.id,
-            generation_origin="runtime_variant",
-            provenance_json={
-                "source": "runtime_variant_generation",
-                "canonical_card_id": canonical_card.id,
-                "generated_at": now.isoformat(),
-            },
+        # No existing variants — return canonical immediately and generate in background.
+        task = asyncio.create_task(
+            self._generate_variant_background(
+                canonical_card=canonical_card,
+                topic_id=canonical_card.topic_id,
+                source_chunk_id=canonical_card.source_chunk_id,
+                tags=canonical_card.tags,
+                topic_key=canonical_card.topic_key,
+            )
         )
-        db.add(variant)
-        await db.commit()
-        await db.refresh(variant)
-        if canonical_card.topic is not None:  # type: ignore[union-attr]
-            variant.topic = canonical_card.topic  # type: ignore[assignment]
-        return variant
+        self._pending_tasks.add(task)
+        task.add_done_callback(self._pending_tasks.discard)
+        return canonical_card
+
+    async def _generate_variant_background(
+        self,
+        *,
+        canonical_card: Card,
+        topic_id: int,
+        source_chunk_id: Optional[str],
+        tags: Optional[str],
+        topic_key: Optional[str],
+    ) -> None:
+        """Background task: generate a variant and persist it."""
+        try:
+            payload = await asyncio.to_thread(
+                self._generate_variant_payload, canonical_card
+            )
+            if payload is None:
+                logger.debug(
+                    "Background variant generation produced no valid payload for card %s",
+                    canonical_card.id,
+                )
+                return
+
+            # Import session factory here to avoid circular imports
+            from src.db.session import AsyncSessionLocal
+
+            async with AsyncSessionLocal() as db:
+                now = dt.datetime.now(dt.timezone.utc)
+                variant = Card(
+                    topic_id=topic_id,
+                    question=payload["query"],
+                    answer=payload["answer"],
+                    difficulty=payload["difficulty"],
+                    question_type=payload["question_type"],
+                    source_chunk_id=source_chunk_id,
+                    tags=tags,
+                    topic_key=topic_key,
+                    variant_of_card_id=canonical_card.id,
+                    generation_origin="runtime_variant",
+                    provenance_json={
+                        "source": "runtime_variant_generation_background",
+                        "canonical_card_id": canonical_card.id,
+                        "generated_at": now.isoformat(),
+                    },
+                )
+                db.add(variant)
+                await db.commit()
+                logger.info(
+                    "Background variant created for card %s (variant id: %s)",
+                    canonical_card.id,
+                    variant.id,
+                )
+        except Exception:
+            logger.exception(
+                "Background variant generation failed for card %s", canonical_card.id
+            )
 
     def _generate_variant_payload(self, canonical: Card) -> Optional[dict[str, str]]:
         context_text = ""
