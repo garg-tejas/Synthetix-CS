@@ -8,7 +8,60 @@ from typing import Dict, Iterable, List, Optional, Tuple
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, ReviewAttempt, ReviewState, UserTopicMastery, UserTopicSWOT
+from src.db.models import (
+    Card,
+    ReviewAttempt,
+    ReviewState,
+    UserTopicMastery,
+    UserTopicSWOT,
+)
+
+
+@dataclass
+class SWOTConfig:
+    """Named constants for MasterySWOTEngine scoring.
+
+    Mirrors the SM2Config pattern from scheduler.py — every magic number
+    used in compute() is exposed here so callers can tune without
+    touching formulas.
+    """
+
+    # Recent-trend window (number of most-recent attempts to average)
+    recent_trend_window: int = 3
+
+    # Quality normalisation denominator
+    max_quality_score: float = 5.0
+
+    # Trend component: _clamp((trend / divisor + offset) * scale, min, max)
+    trend_divisor: float = 2.0
+    trend_offset: float = 1.0
+    trend_scale: float = 10.0
+    trend_min: float = 0.0
+    trend_max: float = 20.0
+
+    # Overdue penalty: min(max_penalty, overdue_count * per_card)
+    max_overdue_penalty: float = 30.0
+    overdue_penalty_per_card: float = 6.0
+
+    # Mastery blend weights
+    mastery_quality_weight: float = 60.0
+    mastery_stability_weight: float = 20.0
+
+    # SWOT bucket parameters
+    full_exposure_attempts: float = 6.0
+    strength_overdue_damping: float = 0.4
+
+    mastery_ceiling: float = 100.0
+    weakness_deficit_weight: float = 0.65
+    weakness_lapse_weight: float = 35.0
+
+    opportunity_exposure_weight: float = 60.0
+    opportunity_mastery_threshold: float = 70.0
+    opportunity_gap_weight: float = 0.4
+
+    max_overdue_threat: float = 70.0
+    threat_per_overdue_card: float = 14.0
+    threat_trend_amplifier: float = 12.0
 
 
 def _clamp(value: float, low: float = 0.0, high: float = 100.0) -> float:
@@ -67,6 +120,9 @@ class MasterySWOTEngine:
     - short-term trend
     """
 
+    def __init__(self, config: Optional[SWOTConfig] = None) -> None:
+        self.cfg = config or SWOTConfig()
+
     def compute(
         self,
         *,
@@ -74,15 +130,16 @@ class MasterySWOTEngine:
         review_states: Iterable[ReviewState],
         review_attempts: Iterable[ReviewAttempt],
         now: Optional[dt.datetime] = None,
-    ) -> tuple[dict[tuple[str, str], MasterySnapshot], dict[tuple[str, str], SWOTSnapshot]]:
+    ) -> tuple[
+        dict[tuple[str, str], MasterySnapshot], dict[tuple[str, str], SWOTSnapshot]
+    ]:
         now = now or dt.datetime.now(dt.timezone.utc)
         card_by_id = {card.id: card for card in cards}
         if not card_by_id:
             return {}, {}
 
         topic_for_card = {
-            card_id: _topic_identity(card)
-            for card_id, card in card_by_id.items()
+            card_id: _topic_identity(card) for card_id, card in card_by_id.items()
         }
 
         attempts_by_topic: dict[tuple[str, str], list[ReviewAttempt]] = {}
@@ -115,11 +172,15 @@ class MasterySWOTEngine:
             topic_states = states_by_topic.get(topic, [])
 
             attempt_count = len(topic_attempts)
-            avg_quality = mean(a.quality for a in topic_attempts) if topic_attempts else 0.0
-            recent = topic_attempts[-3:]
+            avg_quality = (
+                mean(a.quality for a in topic_attempts) if topic_attempts else 0.0
+            )
+            recent = topic_attempts[-self.cfg.recent_trend_window :]
             recent_avg = mean(a.quality for a in recent) if recent else avg_quality
             recent_trend = recent_avg - avg_quality
-            last_reviewed_at = topic_attempts[-1].attempted_at if topic_attempts else None
+            last_reviewed_at = (
+                topic_attempts[-1].attempted_at if topic_attempts else None
+            )
 
             lapse_count = sum(max(0, s.lapses) for s in topic_states)
             due_count = 0
@@ -133,13 +194,20 @@ class MasterySWOTEngine:
                     overdue_count += 1
 
             # Mastery blends quality, stability (low lapses), momentum, and overdue pressure.
-            quality_norm = avg_quality / 5.0 if attempt_count else 0.0
+            c = self.cfg
+            quality_norm = avg_quality / c.max_quality_score if attempt_count else 0.0
             lapse_ratio = min(1.0, lapse_count / max(1.0, float(attempt_count)))
-            trend_component = _clamp((recent_trend / 2.0 + 1.0) * 10.0, 0.0, 20.0)
-            overdue_penalty = min(30.0, overdue_count * 6.0)
+            trend_component = _clamp(
+                (recent_trend / c.trend_divisor + c.trend_offset) * c.trend_scale,
+                c.trend_min,
+                c.trend_max,
+            )
+            overdue_penalty = min(
+                c.max_overdue_penalty, overdue_count * c.overdue_penalty_per_card
+            )
             mastery_score = _clamp(
-                quality_norm * 60.0
-                + (1.0 - lapse_ratio) * 20.0
+                quality_norm * c.mastery_quality_weight
+                + (1.0 - lapse_ratio) * c.mastery_stability_weight
                 + trend_component
                 - overdue_penalty
             )
@@ -160,11 +228,28 @@ class MasterySWOTEngine:
             mastery_out[topic] = mastery_snapshot
 
             # SWOT rule-authoritative scoring.
-            exposure = min(1.0, attempt_count / 6.0)
-            strength = _clamp(mastery_score * (1.0 - min(1.0, overdue_count / max(1, due_count + 1)) * 0.4))
-            weakness = _clamp((100.0 - mastery_score) * 0.65 + lapse_ratio * 35.0)
-            opportunity = _clamp((1.0 - exposure) * 60.0 + max(0.0, 70.0 - mastery_score) * 0.4)
-            threat = _clamp(min(70.0, overdue_count * 14.0) + max(0.0, -recent_trend) * 12.0)
+            exposure = min(1.0, attempt_count / c.full_exposure_attempts)
+            strength = _clamp(
+                mastery_score
+                * (
+                    1.0
+                    - min(1.0, overdue_count / max(1, due_count + 1))
+                    * c.strength_overdue_damping
+                )
+            )
+            weakness = _clamp(
+                (c.mastery_ceiling - mastery_score) * c.weakness_deficit_weight
+                + lapse_ratio * c.weakness_lapse_weight
+            )
+            opportunity = _clamp(
+                (1.0 - exposure) * c.opportunity_exposure_weight
+                + max(0.0, c.opportunity_mastery_threshold - mastery_score)
+                * c.opportunity_gap_weight
+            )
+            threat = _clamp(
+                min(c.max_overdue_threat, overdue_count * c.threat_per_overdue_card)
+                + max(0.0, -recent_trend) * c.threat_trend_amplifier
+            )
 
             bucket_scores = {
                 "strength": strength,
@@ -227,12 +312,10 @@ class MasterySWOTRepository:
             )
         )
         mastery_rows = {
-            (row.subject, row.topic_key): row
-            for row in mastery_result.scalars().all()
+            (row.subject, row.topic_key): row for row in mastery_result.scalars().all()
         }
         swot_rows = {
-            (row.subject, row.topic_key): row
-            for row in swot_result.scalars().all()
+            (row.subject, row.topic_key): row for row in swot_result.scalars().all()
         }
         now = dt.datetime.utcnow()
 
