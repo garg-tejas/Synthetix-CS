@@ -28,13 +28,13 @@ def build_qa_generation_prompt(
 ) -> str:
     """
     Build a prompt for generating questions from a chunk.
-    
+
     Args:
         chunk: The chunk to generate questions from
         num_questions: Number of questions to generate (1-3)
         prev_chunk: Optional previous chunk in logical order
         next_chunk: Optional next chunk in logical order
-    
+
     Returns:
         Formatted prompt string
     """
@@ -58,13 +58,9 @@ def build_qa_generation_prompt(
     # Optional local context from neighboring chunks
     context_lines: List[str] = []
     if prev_chunk is not None:
-        context_lines.append(
-            "- Previous chunk: " + _summarize_neighbor(prev_chunk)
-        )
+        context_lines.append("- Previous chunk: " + _summarize_neighbor(prev_chunk))
     if next_chunk is not None:
-        context_lines.append(
-            "- Next chunk: " + _summarize_neighbor(next_chunk)
-        )
+        context_lines.append("- Next chunk: " + _summarize_neighbor(next_chunk))
     context_block = ""
     if context_lines:
         context_block = (
@@ -81,7 +77,8 @@ def build_qa_generation_prompt(
         "section": "conceptual and applied questions (reasoning, comparisons, and practical behavior)",
     }
     suggested_types = question_type_hints.get(
-        chunk.chunk_type, "conceptual, procedural, comparative, and interview-oriented factual questions"
+        chunk.chunk_type,
+        "conceptual, procedural, comparative, and interview-oriented factual questions",
     )
 
     prompt = f"""You are generating questions for a placement preparation system covering Operating Systems, Database Management Systems, and Computer Networks.
@@ -129,6 +126,40 @@ Return ONLY valid JSON, no markdown formatting, no code blocks:
     }}
   ]
 }}
+
+Here are annotated examples of the quality we expect:
+
+Example 1 (Strong keep - tests mechanism and trade-offs, score ~90):
+{{
+  "query": "Why does TCP use a three-way handshake instead of a two-way handshake for connection establishment?",
+  "answer": "A three-way handshake is needed so both sides can synchronize sequence numbers and confirm reachability. A two-way handshake cannot guarantee that the server's initial sequence number reaches the client, risking half-open connections. The third ACK confirms the server's SYN was received, establishing a fully synchronized connection.",
+  "question_type": "procedural",
+  "atomic_facts": ["Both sides synchronize sequence numbers", "Two-way risks half-open connections", "Third ACK confirms server SYN receipt"],
+  "difficulty": "medium",
+  "placement_interview_score": 92
+}}
+
+Example 2 (Borderline rewrite - concept is valid but framing is too shallow, score ~55):
+{{
+  "query": "What is a deadlock?",
+  "answer": "A deadlock is a situation where processes wait for each other indefinitely.",
+  "question_type": "definition",
+  "atomic_facts": ["Processes wait indefinitely"],
+  "difficulty": "easy",
+  "placement_interview_score": 55
+}}
+Note: This would be improved by asking "What are the four necessary conditions for deadlock, and how can each be prevented?" to elicit deeper reasoning.
+
+Example 3 (Reject - too generic for placement interviews, score ~25):
+{{
+  "query": "What is a computer network?",
+  "answer": "A computer network is a collection of interconnected devices that can communicate and share resources.",
+  "question_type": "definition",
+  "atomic_facts": ["Interconnected devices", "Communication and resource sharing"],
+  "difficulty": "easy",
+  "placement_interview_score": 25
+}}
+Note: This is a first-day fundamentals question with no technical depth. Rejected.
 """
 
     return prompt
@@ -288,4 +319,18 @@ Output format:
     }}
   ]
 }}
+
+Scoring anchor examples for calibration:
+
+Anchor 1 (score 92, decision: keep):
+Question: "Explain how B+ tree index lookups work and why they are preferred over hash indexes for range queries."
+Reasoning: Tests mechanism (B+ tree traversal), practical trade-off (vs hash), and real interview relevance. Strong keep.
+
+Anchor 2 (score 68, decision: rewrite):
+Question: "What is normalization in databases?"
+Reasoning: Valid concept but framing is too shallow. Would be improved by asking about specific normal forms, anomalies they prevent, and denormalization trade-offs. Borderline rewrite.
+
+Anchor 3 (score 35, decision: reject):
+Question: "Name the layers of the OSI model."
+Reasoning: Pure memorization with no analytical depth. Not asked in modern placement interviews as a standalone question. Reject.
 """
