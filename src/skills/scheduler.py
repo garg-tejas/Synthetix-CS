@@ -67,10 +67,13 @@ class SM2Scheduler:
         lapses = int(state.lapses or 0)
 
         if quality < 3:
-            # Failed recall: reset repetitions, short interval, count lapse.
+            # Failed recall: reset repetitions, count lapse.
+            # Proportional reset: halve the interval (capped at 7 days)
+            # instead of always resetting to 1 day when the card was
+            # previously consolidated (interval > 1).
             reps = 0
             lapses += 1
-            interval = 1
+            interval = max(1, min(interval // 2, 7)) if interval > 1 else 1
         else:
             # Successful recall: adjust ease factor.
             q_delta = 5 - quality
@@ -95,4 +98,3 @@ class SM2Scheduler:
         state.lapses = lapses
 
         return state
-

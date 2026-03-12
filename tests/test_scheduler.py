@@ -62,11 +62,10 @@ def test_sm2_failed_review_increments_lapses_and_resets_interval():
     state = scheduler.compute_next(state, quality=5, now=now)
     state = scheduler.compute_next(state, quality=5, now=now)
 
-    # Now a failed recall
+    # Now a failed recall — proportional reset halves the interval (6 → 3)
     updated = scheduler.compute_next(state, quality=1, now=now)
 
     assert updated.repetitions == 0
-    assert updated.interval_days == 1
+    assert updated.interval_days == 3
     assert updated.lapses == 1
-    assert updated.due_at == now + dt.timedelta(days=1)
-
+    assert updated.due_at == now + dt.timedelta(days=3)
