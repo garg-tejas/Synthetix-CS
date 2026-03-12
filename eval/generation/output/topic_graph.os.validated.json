@@ -1,0 +1,388 @@
+{
+  "generated_at": "2026-03-12T12:00:00.000000+00:00",
+  "subject": "os",
+  "topics": [
+    {
+      "subject": "os",
+      "topic_key": "os:introduction",
+      "display_name": "Introduction to Operating Systems",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:history-of-os",
+      "display_name": "History of Operating Systems",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:computer-hardware-basics",
+      "display_name": "Computer Hardware Basics",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:os-zoo",
+      "display_name": "The Operating System Zoo",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:os-concepts",
+      "display_name": "Operating System Concepts",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:system-calls",
+      "display_name": "System Calls",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:os-structure",
+      "display_name": "Operating System Structure",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:virtual-machines",
+      "display_name": "Virtual Machines",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:processes",
+      "display_name": "Processes",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:threads",
+      "display_name": "Threads",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:inter-process-communication",
+      "display_name": "Inter-Process Communication (IPC)",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:scheduling",
+      "display_name": "Scheduling",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:synchronization",
+      "display_name": "Synchronization (Mutexes, Semaphores, Monitors)",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:memory-management",
+      "display_name": "Memory Management",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:virtual-memory",
+      "display_name": "Virtual Memory",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:input-output",
+      "display_name": "Input/Output",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:file-systems",
+      "display_name": "File Systems",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:deadlock",
+      "display_name": "Deadlock",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:security-and-protection",
+      "display_name": "Security and Protection",
+      "source": "manual_v3"
+    }
+  ],
+  "validated_edges": [
+    {
+      "subject": "os",
+      "topic_key": "os:history-of-os",
+      "prerequisite_key": "os:introduction",
+      "confidence": 0.82,
+      "rationale": "Historical evolution is meaningful after understanding what an OS is.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:os-zoo",
+      "prerequisite_key": "os:introduction",
+      "confidence": 0.85,
+      "rationale": "OS families are categorized after understanding what an OS is.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:computer-hardware-basics",
+      "prerequisite_key": "os:introduction",
+      "confidence": 0.90,
+      "rationale": "Hardware basics are foundational for understanding OS internals.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:os-concepts",
+      "prerequisite_key": "os:introduction",
+      "confidence": 0.92,
+      "rationale": "Core OS concepts extend the basic definition of what an OS does.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:os-concepts",
+      "prerequisite_key": "os:computer-hardware-basics",
+      "confidence": 0.90,
+      "rationale": "Concepts like interrupts and privilege modes depend on hardware basics.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:system-calls",
+      "prerequisite_key": "os:os-concepts",
+      "confidence": 0.94,
+      "rationale": "System calls are the programmatic interface to OS abstractions.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:os-structure",
+      "prerequisite_key": "os:system-calls",
+      "confidence": 0.86,
+      "rationale": "Kernel structure (monolithic, micro, hybrid) is clearer after the system-call interface.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:virtual-machines",
+      "prerequisite_key": "os:computer-hardware-basics",
+      "confidence": 0.86,
+      "rationale": "Virtualization relies on hardware-level abstractions like privilege rings.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:virtual-machines",
+      "prerequisite_key": "os:os-structure",
+      "confidence": 0.81,
+      "rationale": "Hypervisor vs OS layering relates to system organization concepts.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:processes",
+      "prerequisite_key": "os:os-concepts",
+      "confidence": 0.95,
+      "rationale": "Processes are the central OS abstraction for execution.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:threads",
+      "prerequisite_key": "os:processes",
+      "confidence": 0.95,
+      "rationale": "Threads are lightweight execution units within a process.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:inter-process-communication",
+      "prerequisite_key": "os:processes",
+      "confidence": 0.91,
+      "rationale": "IPC mechanisms facilitate communication between separate processes.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:inter-process-communication",
+      "prerequisite_key": "os:threads",
+      "confidence": 0.84,
+      "rationale": "Shared-memory IPC and thread synchronization are closely related concepts.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:synchronization",
+      "prerequisite_key": "os:threads",
+      "confidence": 0.94,
+      "rationale": "Synchronization primitives exist to coordinate concurrent threads.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:synchronization",
+      "prerequisite_key": "os:inter-process-communication",
+      "confidence": 0.85,
+      "rationale": "Shared resources in IPC require synchronization to avoid race conditions.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:scheduling",
+      "prerequisite_key": "os:processes",
+      "confidence": 0.88,
+      "rationale": "Scheduling policies govern which process or thread gets CPU time.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:scheduling",
+      "prerequisite_key": "os:threads",
+      "confidence": 0.90,
+      "rationale": "Modern schedulers operate at thread granularity.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:deadlock",
+      "prerequisite_key": "os:synchronization",
+      "confidence": 0.92,
+      "rationale": "Deadlock arises from misuse of synchronization primitives (locks, semaphores).",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:deadlock",
+      "prerequisite_key": "os:threads",
+      "confidence": 0.87,
+      "rationale": "Multi-threaded resource contention is the primary deadlock scenario.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:deadlock",
+      "prerequisite_key": "os:processes",
+      "confidence": 0.89,
+      "rationale": "Deadlocks are modeled over process resource dependency graphs.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:deadlock",
+      "prerequisite_key": "os:scheduling",
+      "confidence": 0.81,
+      "rationale": "Scheduling and resource allocation policies affect deadlock likelihood.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:memory-management",
+      "prerequisite_key": "os:computer-hardware-basics",
+      "confidence": 0.90,
+      "rationale": "Memory management starts from physical memory hardware behavior.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:memory-management",
+      "prerequisite_key": "os:os-concepts",
+      "confidence": 0.86,
+      "rationale": "Address spaces and allocation are core OS abstraction concepts.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:virtual-memory",
+      "prerequisite_key": "os:memory-management",
+      "confidence": 0.95,
+      "rationale": "Virtual memory extends baseline physical memory management with paging.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:virtual-memory",
+      "prerequisite_key": "os:processes",
+      "confidence": 0.82,
+      "rationale": "Per-process address spaces tie virtual memory to the process model.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:input-output",
+      "prerequisite_key": "os:computer-hardware-basics",
+      "confidence": 0.87,
+      "rationale": "I/O subsystems depend on device-level hardware concepts (DMA, interrupts).",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:input-output",
+      "prerequisite_key": "os:system-calls",
+      "confidence": 0.84,
+      "rationale": "I/O operations are exposed to user space via system calls.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:file-systems",
+      "prerequisite_key": "os:input-output",
+      "confidence": 0.90,
+      "rationale": "File systems are built over block I/O abstractions.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:file-systems",
+      "prerequisite_key": "os:memory-management",
+      "confidence": 0.80,
+      "rationale": "Buffer cache and page cache interactions connect file systems and memory.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:security-and-protection",
+      "prerequisite_key": "os:os-concepts",
+      "confidence": 0.85,
+      "rationale": "Protection model builds on fundamental OS abstractions like privilege levels.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:security-and-protection",
+      "prerequisite_key": "os:system-calls",
+      "confidence": 0.83,
+      "rationale": "Access control is enforced at system-call boundaries.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "os",
+      "topic_key": "os:security-and-protection",
+      "prerequisite_key": "os:file-systems",
+      "confidence": 0.78,
+      "rationale": "File permissions and ACLs are key protection topics in file systems.",
+      "source": "manual_v3"
+    }
+  ],
+  "cycle_drops": [],
+  "stats": {
+    "seeded_topics": 120,
+    "extracted_topics": 19,
+    "candidate_edges": 32,
+    "validated_edges_before_cycle_break": 32,
+    "validated_edges_after_cycle_break": 32,
+    "cycle_drops": 0,
+    "min_confidence": 0.7
+  }
+}

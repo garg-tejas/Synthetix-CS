@@ -1,0 +1,1268 @@
+{
+  "generated_at": "2026-03-12T12:00:00.000000+00:00",
+  "subjects": [
+    {
+      "subject": "cn",
+      "topics": [
+        {
+          "subject": "cn",
+          "topic_key": "cn:internet-overview",
+          "display_name": "Internet Overview",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:protocols",
+          "display_name": "Protocols",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:network-edge",
+          "display_name": "Network Edge",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:physical-media",
+          "display_name": "Physical Media",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:network-core",
+          "display_name": "Network Core (Switching and Routing)",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:delay-and-loss",
+          "display_name": "Delay, Loss, and Throughput",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:protocol-layering",
+          "display_name": "Protocol Layering and Encapsulation",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:network-layer",
+          "display_name": "Network Layer",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:link-layer",
+          "display_name": "Link Layer",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:physical-layer",
+          "display_name": "Physical Layer",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:network-security-intro",
+          "display_name": "Network Security Introduction",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:application-layer",
+          "display_name": "Application Layer",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:client-server-and-sockets",
+          "display_name": "Client-Server Model and Sockets",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:transport-services",
+          "display_name": "Transport Services",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:application-layer-protocols",
+          "display_name": "Application-Layer Protocols",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:http",
+          "display_name": "HTTP",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:cookies-and-state",
+          "display_name": "HTTP Cookies and Session State",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:web-caching",
+          "display_name": "Web Caching",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:dns",
+          "display_name": "DNS",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:peer-to-peer",
+          "display_name": "Peer-to-Peer Networks",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:video-streaming",
+          "display_name": "Video Streaming and DASH",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:cdn",
+          "display_name": "Content Distribution Networks",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:transport-layer",
+          "display_name": "Transport Layer Overview",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:multiplexing-demultiplexing",
+          "display_name": "Multiplexing and Demultiplexing",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:udp",
+          "display_name": "UDP",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:reliable-data-transfer",
+          "display_name": "Reliable Data Transfer Protocols",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:pipelining-gbn-sr",
+          "display_name": "Pipelining, GBN, and Selective Repeat",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:tcp-segment-structure",
+          "display_name": "TCP Segment Structure",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:tcp-rtt-and-timeout",
+          "display_name": "TCP RTT Estimation and Timeout",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:tcp-reliable-transfer",
+          "display_name": "TCP Reliable Data Transfer",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:tcp-connection-management",
+          "display_name": "TCP Connection Management",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:congestion-control",
+          "display_name": "Congestion Control",
+          "source": "manual_v3"
+        }
+      ],
+      "validated_edges": [
+        {
+          "subject": "cn",
+          "topic_key": "cn:protocols",
+          "prerequisite_key": "cn:internet-overview",
+          "confidence": 0.95,
+          "rationale": "Protocol concepts require understanding what the Internet is and how it operates.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:protocol-layering",
+          "prerequisite_key": "cn:protocols",
+          "confidence": 0.94,
+          "rationale": "Layering organizes protocols into a stack; requires protocol fundamentals first.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:network-edge",
+          "prerequisite_key": "cn:internet-overview",
+          "confidence": 0.9,
+          "rationale": "Edge devices and access networks are part of the Internet's physical structure.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:physical-media",
+          "prerequisite_key": "cn:network-edge",
+          "confidence": 0.86,
+          "rationale": "Physical media types connect edge devices; taught after edge topology.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:network-core",
+          "prerequisite_key": "cn:internet-overview",
+          "confidence": 0.91,
+          "rationale": "Packet switching, circuit switching, and ISP hierarchy are core Internet architecture.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:delay-and-loss",
+          "prerequisite_key": "cn:network-core",
+          "confidence": 0.92,
+          "rationale": "Delay decomposition and packet loss arise from store-and-forward switching in the core.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:delay-and-loss",
+          "prerequisite_key": "cn:protocol-layering",
+          "confidence": 0.85,
+          "rationale": "Understanding which layer contributes which delay component requires layering knowledge.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:physical-layer",
+          "prerequisite_key": "cn:protocol-layering",
+          "confidence": 0.88,
+          "rationale": "The physical layer is defined within the layered architecture.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:link-layer",
+          "prerequisite_key": "cn:physical-layer",
+          "confidence": 0.87,
+          "rationale": "Link-layer framing and error detection sit directly above physical transmission.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:network-layer",
+          "prerequisite_key": "cn:link-layer",
+          "confidence": 0.9,
+          "rationale": "Network-layer forwarding and routing rely on link-layer delivery between hops.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:network-security-intro",
+          "prerequisite_key": "cn:protocols",
+          "confidence": 0.84,
+          "rationale": "Security threats target protocol weaknesses; requires protocol understanding.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:application-layer",
+          "prerequisite_key": "cn:protocol-layering",
+          "confidence": 0.93,
+          "rationale": "The application layer is the top of the protocol stack; layering context is essential.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:client-server-and-sockets",
+          "prerequisite_key": "cn:application-layer",
+          "confidence": 0.92,
+          "rationale": "Client-server architecture and socket API are application-layer fundamentals.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:transport-services",
+          "prerequisite_key": "cn:application-layer",
+          "confidence": 0.9,
+          "rationale": "Applications choose transport services; understanding both layers is needed.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:application-layer-protocols",
+          "prerequisite_key": "cn:transport-services",
+          "confidence": 0.91,
+          "rationale": "Application protocols are designed around available transport capabilities.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:application-layer-protocols",
+          "prerequisite_key": "cn:client-server-and-sockets",
+          "confidence": 0.86,
+          "rationale": "Protocol message exchange assumes the client-server and socket model.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:http",
+          "prerequisite_key": "cn:application-layer-protocols",
+          "confidence": 0.94,
+          "rationale": "HTTP is the primary application-layer protocol case study.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:cookies-and-state",
+          "prerequisite_key": "cn:http",
+          "confidence": 0.88,
+          "rationale": "Cookies add state management to the stateless HTTP protocol.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:web-caching",
+          "prerequisite_key": "cn:http",
+          "confidence": 0.89,
+          "rationale": "Caching and conditional GET are HTTP-level optimization mechanisms.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:dns",
+          "prerequisite_key": "cn:application-layer-protocols",
+          "confidence": 0.92,
+          "rationale": "DNS is a critical application-layer infrastructure service.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:peer-to-peer",
+          "prerequisite_key": "cn:application-layer-protocols",
+          "confidence": 0.83,
+          "rationale": "P2P is an alternative application architecture to client-server.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:video-streaming",
+          "prerequisite_key": "cn:http",
+          "confidence": 0.85,
+          "rationale": "DASH and adaptive streaming are built on HTTP.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:cdn",
+          "prerequisite_key": "cn:dns",
+          "confidence": 0.87,
+          "rationale": "CDNs use DNS-based redirection for server selection.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:cdn",
+          "prerequisite_key": "cn:video-streaming",
+          "confidence": 0.86,
+          "rationale": "CDNs are primarily motivated by large-scale video delivery.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:transport-layer",
+          "prerequisite_key": "cn:protocol-layering",
+          "confidence": 0.92,
+          "rationale": "The transport layer is defined within the protocol stack.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:transport-layer",
+          "prerequisite_key": "cn:network-layer",
+          "confidence": 0.88,
+          "rationale": "Transport services are built on top of network-layer best-effort delivery.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:transport-layer",
+          "prerequisite_key": "cn:transport-services",
+          "confidence": 0.85,
+          "rationale": "Application-side transport requirements motivate transport-layer internals.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:multiplexing-demultiplexing",
+          "prerequisite_key": "cn:transport-layer",
+          "confidence": 0.93,
+          "rationale": "Mux/demux is the first transport-layer mechanism taught.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:udp",
+          "prerequisite_key": "cn:multiplexing-demultiplexing",
+          "confidence": 0.9,
+          "rationale": "UDP is a minimal transport using connectionless multiplexing and checksums.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:reliable-data-transfer",
+          "prerequisite_key": "cn:transport-layer",
+          "confidence": 0.91,
+          "rationale": "Reliable transfer (rdt1-3) is the theoretical foundation of transport reliability.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:pipelining-gbn-sr",
+          "prerequisite_key": "cn:reliable-data-transfer",
+          "confidence": 0.93,
+          "rationale": "GBN and SR are pipelined extensions of stop-and-wait reliable transfer.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:tcp-segment-structure",
+          "prerequisite_key": "cn:multiplexing-demultiplexing",
+          "confidence": 0.9,
+          "rationale": "TCP segment fields (ports, seq/ack numbers) build on mux/demux concepts.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:tcp-rtt-and-timeout",
+          "prerequisite_key": "cn:tcp-segment-structure",
+          "confidence": 0.89,
+          "rationale": "RTT estimation uses TCP sequence numbers and acknowledgment timing.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:tcp-reliable-transfer",
+          "prerequisite_key": "cn:pipelining-gbn-sr",
+          "confidence": 0.91,
+          "rationale": "TCP's reliability mechanism is a practical realization of pipelined ARQ.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:tcp-reliable-transfer",
+          "prerequisite_key": "cn:tcp-segment-structure",
+          "confidence": 0.9,
+          "rationale": "TCP reliable transfer depends on segment fields like sequence numbers and flags.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:tcp-connection-management",
+          "prerequisite_key": "cn:tcp-segment-structure",
+          "confidence": 0.91,
+          "rationale": "Three-way handshake and teardown use TCP flags defined in the segment structure.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:congestion-control",
+          "prerequisite_key": "cn:tcp-reliable-transfer",
+          "confidence": 0.92,
+          "rationale": "Congestion control adjusts the sending rate of TCP's reliable transfer mechanism.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "cn",
+          "topic_key": "cn:congestion-control",
+          "prerequisite_key": "cn:delay-and-loss",
+          "confidence": 0.86,
+          "rationale": "Congestion manifests as increased delay and packet loss in the network.",
+          "source": "manual_v3"
+        }
+      ],
+      "cycle_drops": [],
+      "stats": {
+        "seeded_topics": 120,
+        "extracted_topics": 32,
+        "candidate_edges": 38,
+        "validated_edges_before_cycle_break": 38,
+        "validated_edges_after_cycle_break": 38,
+        "cycle_drops": 0,
+        "min_confidence": 0.7
+      }
+    },
+    {
+      "subject": "dbms",
+      "topics": [
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:intro-to-dbms",
+          "display_name": "Introduction to DBMS",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:relational-model",
+          "display_name": "The Relational Model",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:conceptual-design",
+          "display_name": "Conceptual Database Design",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:er-model",
+          "display_name": "ER Model Basics",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:er-constraints",
+          "display_name": "ER Constraints (Keys, Participation)",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:er-advanced",
+          "display_name": "Advanced ER Concepts (Weak Entities, Aggregation, Hierarchies)",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:er-to-relational-mapping",
+          "display_name": "ER-to-Relational Mapping",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:relational-algebra",
+          "display_name": "Relational Algebra",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:sql-ddl",
+          "display_name": "SQL DDL and Schema Creation",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:integrity-constraints",
+          "display_name": "Integrity Constraints (Keys, Foreign Keys, Assertions)",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:schema-refinement",
+          "display_name": "Schema Refinement and Normalization",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:sql-queries",
+          "display_name": "SQL Queries (Single Table, Joins, Aggregation)",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:nested-queries",
+          "display_name": "Nested Queries and Set Operations",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:triggers",
+          "display_name": "Triggers and Active Database Rules",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:views",
+          "display_name": "Views and Data Independence",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:storage-and-indexing",
+          "display_name": "Storage, Indexing, and B-Trees",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:transactions",
+          "display_name": "Transactions (ACID, Concurrency, Recovery)",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:application-dev",
+          "display_name": "Application Development (Embedded SQL, JDBC)",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:web-architectures",
+          "display_name": "Web and Distributed Architectures",
+          "source": "manual_v3"
+        }
+      ],
+      "validated_edges": [
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:relational-model",
+          "prerequisite_key": "dbms:intro-to-dbms",
+          "confidence": 0.95,
+          "rationale": "The relational model is the first formal topic after DBMS introduction.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:conceptual-design",
+          "prerequisite_key": "dbms:relational-model",
+          "confidence": 0.9,
+          "rationale": "Conceptual design is motivated by the need to produce relational schemas.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:er-model",
+          "prerequisite_key": "dbms:conceptual-design",
+          "confidence": 0.95,
+          "rationale": "ER modeling is the primary conceptual design tool.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:er-constraints",
+          "prerequisite_key": "dbms:er-model",
+          "confidence": 0.96,
+          "rationale": "Key and participation constraints are defined on ER structures.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:er-advanced",
+          "prerequisite_key": "dbms:er-constraints",
+          "confidence": 0.9,
+          "rationale": "Weak entities, aggregation, and hierarchies build on base ER constraints.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:er-to-relational-mapping",
+          "prerequisite_key": "dbms:er-advanced",
+          "confidence": 0.92,
+          "rationale": "Mapping rules must handle all ER constructs including advanced ones.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:er-to-relational-mapping",
+          "prerequisite_key": "dbms:relational-model",
+          "confidence": 0.93,
+          "rationale": "The target of ER-to-relational mapping is the relational model.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:relational-algebra",
+          "prerequisite_key": "dbms:relational-model",
+          "confidence": 0.95,
+          "rationale": "Relational algebra formalizes operations on relations.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:sql-ddl",
+          "prerequisite_key": "dbms:relational-model",
+          "confidence": 0.9,
+          "rationale": "DDL creates structures expressed in the relational model.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:integrity-constraints",
+          "prerequisite_key": "dbms:sql-ddl",
+          "confidence": 0.9,
+          "rationale": "Integrity constraints are declared within DDL schema definitions.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:integrity-constraints",
+          "prerequisite_key": "dbms:er-constraints",
+          "confidence": 0.84,
+          "rationale": "ER-level constraints map to relational integrity constraints.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:schema-refinement",
+          "prerequisite_key": "dbms:relational-model",
+          "confidence": 0.92,
+          "rationale": "Normalization is defined over relations and functional dependencies.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:schema-refinement",
+          "prerequisite_key": "dbms:integrity-constraints",
+          "confidence": 0.83,
+          "rationale": "Refinement decisions depend on preserving integrity constraints.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:schema-refinement",
+          "prerequisite_key": "dbms:er-to-relational-mapping",
+          "confidence": 0.81,
+          "rationale": "Normalization often refines schemas produced by ER-to-relational mapping.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:sql-queries",
+          "prerequisite_key": "dbms:relational-algebra",
+          "confidence": 0.93,
+          "rationale": "SQL query semantics align with relational algebra operations.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:sql-queries",
+          "prerequisite_key": "dbms:sql-ddl",
+          "confidence": 0.83,
+          "rationale": "Querying assumes familiarity with schema definitions.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:nested-queries",
+          "prerequisite_key": "dbms:sql-queries",
+          "confidence": 0.9,
+          "rationale": "Subqueries and set operations extend core SQL querying patterns.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:triggers",
+          "prerequisite_key": "dbms:sql-queries",
+          "confidence": 0.87,
+          "rationale": "Trigger bodies contain SQL queries and DML statements.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:triggers",
+          "prerequisite_key": "dbms:integrity-constraints",
+          "confidence": 0.86,
+          "rationale": "Triggers often enforce complex integrity conditions beyond declarative constraints.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:views",
+          "prerequisite_key": "dbms:sql-queries",
+          "confidence": 0.88,
+          "rationale": "Views are defined through SQL query expressions.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:views",
+          "prerequisite_key": "dbms:integrity-constraints",
+          "confidence": 0.81,
+          "rationale": "Updatable view behavior is constrained by integrity rules.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:storage-and-indexing",
+          "prerequisite_key": "dbms:relational-model",
+          "confidence": 0.88,
+          "rationale": "Storage structures implement the relational model physically.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:storage-and-indexing",
+          "prerequisite_key": "dbms:sql-queries",
+          "confidence": 0.85,
+          "rationale": "Index design is motivated by query performance optimization.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:transactions",
+          "prerequisite_key": "dbms:sql-queries",
+          "confidence": 0.88,
+          "rationale": "Transaction behavior is understood through query and update workloads.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:transactions",
+          "prerequisite_key": "dbms:storage-and-indexing",
+          "confidence": 0.82,
+          "rationale": "Recovery and locking mechanisms depend on storage-level concepts like WAL and page I/O.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:application-dev",
+          "prerequisite_key": "dbms:sql-queries",
+          "confidence": 0.9,
+          "rationale": "Application code embeds and executes SQL queries.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:application-dev",
+          "prerequisite_key": "dbms:transactions",
+          "confidence": 0.86,
+          "rationale": "Application logic must handle transaction boundaries and error recovery.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:web-architectures",
+          "prerequisite_key": "dbms:application-dev",
+          "confidence": 0.9,
+          "rationale": "Web architectures extend database-backed application development patterns.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "dbms",
+          "topic_key": "dbms:web-architectures",
+          "prerequisite_key": "dbms:transactions",
+          "confidence": 0.82,
+          "rationale": "Distributed web systems still rely on transaction guarantees.",
+          "source": "manual_v3"
+        }
+      ],
+      "cycle_drops": [],
+      "stats": {
+        "seeded_topics": 120,
+        "extracted_topics": 19,
+        "candidate_edges": 29,
+        "validated_edges_before_cycle_break": 29,
+        "validated_edges_after_cycle_break": 29,
+        "cycle_drops": 0,
+        "min_confidence": 0.7
+      }
+    },
+    {
+      "subject": "os",
+      "topics": [
+        {
+          "subject": "os",
+          "topic_key": "os:introduction",
+          "display_name": "Introduction to Operating Systems",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:history-of-os",
+          "display_name": "History of Operating Systems",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:computer-hardware-basics",
+          "display_name": "Computer Hardware Basics",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:os-zoo",
+          "display_name": "The Operating System Zoo",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:os-concepts",
+          "display_name": "Operating System Concepts",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:system-calls",
+          "display_name": "System Calls",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:os-structure",
+          "display_name": "Operating System Structure",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:virtual-machines",
+          "display_name": "Virtual Machines",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:processes",
+          "display_name": "Processes",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:threads",
+          "display_name": "Threads",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:inter-process-communication",
+          "display_name": "Inter-Process Communication (IPC)",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:scheduling",
+          "display_name": "Scheduling",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:synchronization",
+          "display_name": "Synchronization (Mutexes, Semaphores, Monitors)",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:memory-management",
+          "display_name": "Memory Management",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:virtual-memory",
+          "display_name": "Virtual Memory",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:input-output",
+          "display_name": "Input/Output",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:file-systems",
+          "display_name": "File Systems",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:deadlock",
+          "display_name": "Deadlock",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:security-and-protection",
+          "display_name": "Security and Protection",
+          "source": "manual_v3"
+        }
+      ],
+      "validated_edges": [
+        {
+          "subject": "os",
+          "topic_key": "os:history-of-os",
+          "prerequisite_key": "os:introduction",
+          "confidence": 0.82,
+          "rationale": "Historical evolution is meaningful after understanding what an OS is.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:os-zoo",
+          "prerequisite_key": "os:introduction",
+          "confidence": 0.85,
+          "rationale": "OS families are categorized after understanding what an OS is.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:computer-hardware-basics",
+          "prerequisite_key": "os:introduction",
+          "confidence": 0.9,
+          "rationale": "Hardware basics are foundational for understanding OS internals.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:os-concepts",
+          "prerequisite_key": "os:introduction",
+          "confidence": 0.92,
+          "rationale": "Core OS concepts extend the basic definition of what an OS does.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:os-concepts",
+          "prerequisite_key": "os:computer-hardware-basics",
+          "confidence": 0.9,
+          "rationale": "Concepts like interrupts and privilege modes depend on hardware basics.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:system-calls",
+          "prerequisite_key": "os:os-concepts",
+          "confidence": 0.94,
+          "rationale": "System calls are the programmatic interface to OS abstractions.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:os-structure",
+          "prerequisite_key": "os:system-calls",
+          "confidence": 0.86,
+          "rationale": "Kernel structure (monolithic, micro, hybrid) is clearer after the system-call interface.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:virtual-machines",
+          "prerequisite_key": "os:computer-hardware-basics",
+          "confidence": 0.86,
+          "rationale": "Virtualization relies on hardware-level abstractions like privilege rings.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:virtual-machines",
+          "prerequisite_key": "os:os-structure",
+          "confidence": 0.81,
+          "rationale": "Hypervisor vs OS layering relates to system organization concepts.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:processes",
+          "prerequisite_key": "os:os-concepts",
+          "confidence": 0.95,
+          "rationale": "Processes are the central OS abstraction for execution.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:threads",
+          "prerequisite_key": "os:processes",
+          "confidence": 0.95,
+          "rationale": "Threads are lightweight execution units within a process.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:inter-process-communication",
+          "prerequisite_key": "os:processes",
+          "confidence": 0.91,
+          "rationale": "IPC mechanisms facilitate communication between separate processes.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:inter-process-communication",
+          "prerequisite_key": "os:threads",
+          "confidence": 0.84,
+          "rationale": "Shared-memory IPC and thread synchronization are closely related concepts.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:synchronization",
+          "prerequisite_key": "os:threads",
+          "confidence": 0.94,
+          "rationale": "Synchronization primitives exist to coordinate concurrent threads.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:synchronization",
+          "prerequisite_key": "os:inter-process-communication",
+          "confidence": 0.85,
+          "rationale": "Shared resources in IPC require synchronization to avoid race conditions.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:scheduling",
+          "prerequisite_key": "os:processes",
+          "confidence": 0.88,
+          "rationale": "Scheduling policies govern which process or thread gets CPU time.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:scheduling",
+          "prerequisite_key": "os:threads",
+          "confidence": 0.9,
+          "rationale": "Modern schedulers operate at thread granularity.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:deadlock",
+          "prerequisite_key": "os:synchronization",
+          "confidence": 0.92,
+          "rationale": "Deadlock arises from misuse of synchronization primitives (locks, semaphores).",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:deadlock",
+          "prerequisite_key": "os:threads",
+          "confidence": 0.87,
+          "rationale": "Multi-threaded resource contention is the primary deadlock scenario.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:deadlock",
+          "prerequisite_key": "os:processes",
+          "confidence": 0.89,
+          "rationale": "Deadlocks are modeled over process resource dependency graphs.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:deadlock",
+          "prerequisite_key": "os:scheduling",
+          "confidence": 0.81,
+          "rationale": "Scheduling and resource allocation policies affect deadlock likelihood.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:memory-management",
+          "prerequisite_key": "os:computer-hardware-basics",
+          "confidence": 0.9,
+          "rationale": "Memory management starts from physical memory hardware behavior.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:memory-management",
+          "prerequisite_key": "os:os-concepts",
+          "confidence": 0.86,
+          "rationale": "Address spaces and allocation are core OS abstraction concepts.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:virtual-memory",
+          "prerequisite_key": "os:memory-management",
+          "confidence": 0.95,
+          "rationale": "Virtual memory extends baseline physical memory management with paging.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:virtual-memory",
+          "prerequisite_key": "os:processes",
+          "confidence": 0.82,
+          "rationale": "Per-process address spaces tie virtual memory to the process model.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:input-output",
+          "prerequisite_key": "os:computer-hardware-basics",
+          "confidence": 0.87,
+          "rationale": "I/O subsystems depend on device-level hardware concepts (DMA, interrupts).",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:input-output",
+          "prerequisite_key": "os:system-calls",
+          "confidence": 0.84,
+          "rationale": "I/O operations are exposed to user space via system calls.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:file-systems",
+          "prerequisite_key": "os:input-output",
+          "confidence": 0.9,
+          "rationale": "File systems are built over block I/O abstractions.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:file-systems",
+          "prerequisite_key": "os:memory-management",
+          "confidence": 0.8,
+          "rationale": "Buffer cache and page cache interactions connect file systems and memory.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:security-and-protection",
+          "prerequisite_key": "os:os-concepts",
+          "confidence": 0.85,
+          "rationale": "Protection model builds on fundamental OS abstractions like privilege levels.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:security-and-protection",
+          "prerequisite_key": "os:system-calls",
+          "confidence": 0.83,
+          "rationale": "Access control is enforced at system-call boundaries.",
+          "source": "manual_v3"
+        },
+        {
+          "subject": "os",
+          "topic_key": "os:security-and-protection",
+          "prerequisite_key": "os:file-systems",
+          "confidence": 0.78,
+          "rationale": "File permissions and ACLs are key protection topics in file systems.",
+          "source": "manual_v3"
+        }
+      ],
+      "cycle_drops": [],
+      "stats": {
+        "seeded_topics": 120,
+        "extracted_topics": 19,
+        "candidate_edges": 32,
+        "validated_edges_before_cycle_break": 32,
+        "validated_edges_after_cycle_break": 32,
+        "cycle_drops": 0,
+        "min_confidence": 0.7
+      }
+    }
+  ]
+}

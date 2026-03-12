@@ -1,0 +1,364 @@
+{
+  "generated_at": "2026-03-12T12:00:00.000000+00:00",
+  "subject": "dbms",
+  "topics": [
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:intro-to-dbms",
+      "display_name": "Introduction to DBMS",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:relational-model",
+      "display_name": "The Relational Model",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:conceptual-design",
+      "display_name": "Conceptual Database Design",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:er-model",
+      "display_name": "ER Model Basics",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:er-constraints",
+      "display_name": "ER Constraints (Keys, Participation)",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:er-advanced",
+      "display_name": "Advanced ER Concepts (Weak Entities, Aggregation, Hierarchies)",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:er-to-relational-mapping",
+      "display_name": "ER-to-Relational Mapping",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:relational-algebra",
+      "display_name": "Relational Algebra",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:sql-ddl",
+      "display_name": "SQL DDL and Schema Creation",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:integrity-constraints",
+      "display_name": "Integrity Constraints (Keys, Foreign Keys, Assertions)",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:schema-refinement",
+      "display_name": "Schema Refinement and Normalization",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:sql-queries",
+      "display_name": "SQL Queries (Single Table, Joins, Aggregation)",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:nested-queries",
+      "display_name": "Nested Queries and Set Operations",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:triggers",
+      "display_name": "Triggers and Active Database Rules",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:views",
+      "display_name": "Views and Data Independence",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:storage-and-indexing",
+      "display_name": "Storage, Indexing, and B-Trees",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:transactions",
+      "display_name": "Transactions (ACID, Concurrency, Recovery)",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:application-dev",
+      "display_name": "Application Development (Embedded SQL, JDBC)",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:web-architectures",
+      "display_name": "Web and Distributed Architectures",
+      "source": "manual_v3"
+    }
+  ],
+  "validated_edges": [
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:relational-model",
+      "prerequisite_key": "dbms:intro-to-dbms",
+      "confidence": 0.95,
+      "rationale": "The relational model is the first formal topic after DBMS introduction.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:conceptual-design",
+      "prerequisite_key": "dbms:relational-model",
+      "confidence": 0.90,
+      "rationale": "Conceptual design is motivated by the need to produce relational schemas.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:er-model",
+      "prerequisite_key": "dbms:conceptual-design",
+      "confidence": 0.95,
+      "rationale": "ER modeling is the primary conceptual design tool.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:er-constraints",
+      "prerequisite_key": "dbms:er-model",
+      "confidence": 0.96,
+      "rationale": "Key and participation constraints are defined on ER structures.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:er-advanced",
+      "prerequisite_key": "dbms:er-constraints",
+      "confidence": 0.90,
+      "rationale": "Weak entities, aggregation, and hierarchies build on base ER constraints.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:er-to-relational-mapping",
+      "prerequisite_key": "dbms:er-advanced",
+      "confidence": 0.92,
+      "rationale": "Mapping rules must handle all ER constructs including advanced ones.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:er-to-relational-mapping",
+      "prerequisite_key": "dbms:relational-model",
+      "confidence": 0.93,
+      "rationale": "The target of ER-to-relational mapping is the relational model.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:relational-algebra",
+      "prerequisite_key": "dbms:relational-model",
+      "confidence": 0.95,
+      "rationale": "Relational algebra formalizes operations on relations.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:sql-ddl",
+      "prerequisite_key": "dbms:relational-model",
+      "confidence": 0.90,
+      "rationale": "DDL creates structures expressed in the relational model.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:integrity-constraints",
+      "prerequisite_key": "dbms:sql-ddl",
+      "confidence": 0.90,
+      "rationale": "Integrity constraints are declared within DDL schema definitions.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:integrity-constraints",
+      "prerequisite_key": "dbms:er-constraints",
+      "confidence": 0.84,
+      "rationale": "ER-level constraints map to relational integrity constraints.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:schema-refinement",
+      "prerequisite_key": "dbms:relational-model",
+      "confidence": 0.92,
+      "rationale": "Normalization is defined over relations and functional dependencies.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:schema-refinement",
+      "prerequisite_key": "dbms:integrity-constraints",
+      "confidence": 0.83,
+      "rationale": "Refinement decisions depend on preserving integrity constraints.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:schema-refinement",
+      "prerequisite_key": "dbms:er-to-relational-mapping",
+      "confidence": 0.81,
+      "rationale": "Normalization often refines schemas produced by ER-to-relational mapping.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:sql-queries",
+      "prerequisite_key": "dbms:relational-algebra",
+      "confidence": 0.93,
+      "rationale": "SQL query semantics align with relational algebra operations.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:sql-queries",
+      "prerequisite_key": "dbms:sql-ddl",
+      "confidence": 0.83,
+      "rationale": "Querying assumes familiarity with schema definitions.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:nested-queries",
+      "prerequisite_key": "dbms:sql-queries",
+      "confidence": 0.90,
+      "rationale": "Subqueries and set operations extend core SQL querying patterns.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:triggers",
+      "prerequisite_key": "dbms:sql-queries",
+      "confidence": 0.87,
+      "rationale": "Trigger bodies contain SQL queries and DML statements.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:triggers",
+      "prerequisite_key": "dbms:integrity-constraints",
+      "confidence": 0.86,
+      "rationale": "Triggers often enforce complex integrity conditions beyond declarative constraints.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:views",
+      "prerequisite_key": "dbms:sql-queries",
+      "confidence": 0.88,
+      "rationale": "Views are defined through SQL query expressions.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:views",
+      "prerequisite_key": "dbms:integrity-constraints",
+      "confidence": 0.81,
+      "rationale": "Updatable view behavior is constrained by integrity rules.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:storage-and-indexing",
+      "prerequisite_key": "dbms:relational-model",
+      "confidence": 0.88,
+      "rationale": "Storage structures implement the relational model physically.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:storage-and-indexing",
+      "prerequisite_key": "dbms:sql-queries",
+      "confidence": 0.85,
+      "rationale": "Index design is motivated by query performance optimization.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:transactions",
+      "prerequisite_key": "dbms:sql-queries",
+      "confidence": 0.88,
+      "rationale": "Transaction behavior is understood through query and update workloads.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:transactions",
+      "prerequisite_key": "dbms:storage-and-indexing",
+      "confidence": 0.82,
+      "rationale": "Recovery and locking mechanisms depend on storage-level concepts like WAL and page I/O.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:application-dev",
+      "prerequisite_key": "dbms:sql-queries",
+      "confidence": 0.90,
+      "rationale": "Application code embeds and executes SQL queries.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:application-dev",
+      "prerequisite_key": "dbms:transactions",
+      "confidence": 0.86,
+      "rationale": "Application logic must handle transaction boundaries and error recovery.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:web-architectures",
+      "prerequisite_key": "dbms:application-dev",
+      "confidence": 0.90,
+      "rationale": "Web architectures extend database-backed application development patterns.",
+      "source": "manual_v3"
+    },
+    {
+      "subject": "dbms",
+      "topic_key": "dbms:web-architectures",
+      "prerequisite_key": "dbms:transactions",
+      "confidence": 0.82,
+      "rationale": "Distributed web systems still rely on transaction guarantees.",
+      "source": "manual_v3"
+    }
+  ],
+  "cycle_drops": [],
+  "stats": {
+    "seeded_topics": 120,
+    "extracted_topics": 19,
+    "candidate_edges": 29,
+    "validated_edges_before_cycle_break": 29,
+    "validated_edges_after_cycle_break": 29,
+    "cycle_drops": 0,
+    "min_confidence": 0.7
+  }
+}
