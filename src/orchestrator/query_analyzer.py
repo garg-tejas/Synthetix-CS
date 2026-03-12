@@ -5,11 +5,15 @@ Uses heuristics and src.rag.query_understanding for definition/procedural/compar
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+from src.llm import create_client
 from src.rag.query_understanding import analyze as analyze_intent
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -21,6 +25,7 @@ class QueryAnalysis:
     sub_queries: List[str]
     entities: List[str]
     requires_retrieval: bool
+    reformulated_query: Optional[str] = None
 
 
 _SIMPLE_GREETING = re.compile(
@@ -72,10 +77,81 @@ def _extract_entities(query: str, concept: Optional[str]) -> List[str]:
     words = re.findall(r"[A-Za-z0-9][A-Za-z0-9\-]*", query)
     for w in words:
         wl = w.lower()
-        if len(wl) > 2 and wl not in ("what", "how", "why", "when", "the", "and", "for", "with", "from", "does", "explain", "define", "compare", "difference", "between"):
+        if len(wl) > 2 and wl not in (
+            "what",
+            "how",
+            "why",
+            "when",
+            "the",
+            "and",
+            "for",
+            "with",
+            "from",
+            "does",
+            "explain",
+            "define",
+            "compare",
+            "difference",
+            "between",
+        ):
             if w not in entities:
                 entities.append(w)
     return entities[:10]
+
+
+_FOLLOW_UP_PRONOUNS = re.compile(
+    r"\b(it|its|they|them|their|this|that|these|those|the same|above|previous)\b",
+    re.I,
+)
+_SHORT_QUERY_THRESHOLD = 6  # word count
+
+
+def _is_follow_up(query: str, history: Optional[List[dict]]) -> bool:
+    """Heuristic: query is likely a follow-up if it has pronouns/short and there's history."""
+    if not history:
+        return False
+    q = query.strip()
+    if not q:
+        return False
+    # Very short queries after conversation often reference prior context
+    if len(q.split()) <= _SHORT_QUERY_THRESHOLD and len(history) >= 1:
+        if _FOLLOW_UP_PRONOUNS.search(q):
+            return True
+    # Any pronoun-heavy query with history
+    pronoun_hits = len(_FOLLOW_UP_PRONOUNS.findall(q))
+    if pronoun_hits >= 1 and len(history) >= 1:
+        return True
+    return False
+
+
+def _reformulate_query(query: str, history: List[dict]) -> Optional[str]:
+    """Use LLM to reformulate a follow-up query into a standalone query."""
+    # Build conversation context (last 3 turns max)
+    recent = history[-3:]
+    turns_text = "\n".join(
+        f"User: {t['query']}\nAssistant: {t['answer'][:200]}" for t in recent
+    )
+    prompt = f"""Rewrite the follow-up question into a fully self-contained question.
+Use the conversation history to resolve any pronouns or references.
+Return ONLY the rewritten question, nothing else.
+
+Conversation:
+{turns_text}
+
+Follow-up question: {query}
+
+Rewritten standalone question:"""
+
+    try:
+        client = create_client()
+        result = client.generate_single(prompt, max_tokens=150, temperature=0.0)
+        reformulated = result.strip().strip('"').strip()
+        if reformulated and len(reformulated) > 5:
+            logger.info("Reformulated '%s' -> '%s'", query, reformulated)
+            return reformulated
+    except Exception:
+        logger.warning("Follow-up reformulation failed for query: %s", query)
+    return None
 
 
 class QueryAnalyzer:
@@ -87,7 +163,8 @@ class QueryAnalyzer:
         history: Optional[List[dict]] = None,
     ) -> QueryAnalysis:
         """
-        Analyze query. history is reserved for follow-up detection; not used in v0.
+        Analyze query. If history is provided and query looks like a follow-up,
+        reformulate it into a standalone query using the LLM.
         """
         q = (query or "").strip()
         if not q:
@@ -97,6 +174,7 @@ class QueryAnalyzer:
                 sub_queries=[],
                 entities=[],
                 requires_retrieval=False,
+                reformulated_query=None,
             )
         if _SIMPLE_GREETING.match(q):
             return QueryAnalysis(
@@ -105,7 +183,14 @@ class QueryAnalyzer:
                 sub_queries=[],
                 entities=[],
                 requires_retrieval=False,
+                reformulated_query=None,
             )
+        # Follow-up detection and reformulation
+        reformulated: Optional[str] = None
+        if _is_follow_up(q, history):
+            reformulated = _reformulate_query(q, history)
+            if reformulated:
+                q = reformulated
         intent_result = analyze_intent(q)
         intent = _infer_intent(intent_result)
         complexity = _infer_complexity(q)
@@ -117,4 +202,5 @@ class QueryAnalyzer:
             sub_queries=sub_queries,
             entities=entities,
             requires_retrieval=True,
+            reformulated_query=reformulated,
         )

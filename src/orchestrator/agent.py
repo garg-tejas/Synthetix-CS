@@ -80,6 +80,7 @@ class RAGAgent:
                     sources_used=[],
                 ),
             )
+        effective_query = analysis.reformulated_query or query
         top_k = self.rag_config.top_k
         if analysis.complexity == "multi-part" and len(analysis.sub_queries) >= 2:
             result_lists: List[List[RetrievalResult]] = []
@@ -88,7 +89,7 @@ class RAGAgent:
                 result_lists.append(self.retriever.search(sq, k_per))
             results = _merge_results(result_lists, top_k)
         else:
-            results = self.retriever.search(query, top_k)
+            results = self.retriever.search(effective_query, top_k)
         if not results:
             return (
                 None,
@@ -118,6 +119,7 @@ class RAGAgent:
             if self.memory is not None:
                 self.memory.add_turn(query, fallback.answer, fallback.sources_used)
             return fallback
+        effective_query = analysis.reformulated_query or query
         top_k = self.rag_config.top_k
         if analysis.complexity == "multi-part" and len(analysis.sub_queries) >= 2:
             result_lists: List[List[RetrievalResult]] = []
@@ -126,7 +128,7 @@ class RAGAgent:
                 result_lists.append(self.retriever.search(sq, k_per))
             results = _merge_results(result_lists, top_k)
         else:
-            results = self.retriever.search(query, top_k)
+            results = self.retriever.search(effective_query, top_k)
         if not results:
             no_result = AgentResponse(
                 answer="No relevant passages were found. Try rephrasing your question.",
@@ -155,7 +157,7 @@ class RAGAgent:
                     self.memory.add_turn(query, resp.answer, resp.sources_used)
                 return resp
             top_k = min(top_k + 5, self.rag_config.candidate_k)
-            results = self.retriever.search(query, top_k)
+            results = self.retriever.search(effective_query, top_k)
             if not results:
                 return resp
         if self.memory is not None:
