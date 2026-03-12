@@ -54,6 +54,7 @@ export default function FeedbackPanel({
   }, [result.where_you_missed])
 
   const verdictTone = useMemo<FeedbackTone>(() => {
+    if (normalizedVerdict.includes('grading_error') || normalizedVerdict.includes('error')) return 'info'
     if (normalizedVerdict.includes('incorrect')) return 'danger'
     if (normalizedVerdict.includes('partial')) return 'warning'
     if (normalizedVerdict.includes('correct')) return 'success'
@@ -100,6 +101,13 @@ export default function FeedbackPanel({
           ariaLabel="Model score"
         />
       </div>
+
+      {normalizedVerdict.includes('grading_error') ? (
+        <section className="review-feedback-panel__section">
+          <h4>Grading unavailable</h4>
+          <p>We could not grade your answer automatically this time. Please review the reference answer below and self-assess.</p>
+        </section>
+      ) : null}
 
       {shouldRemediate ? (
         <section className="review-feedback-panel__section">

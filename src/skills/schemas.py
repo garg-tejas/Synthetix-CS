@@ -93,7 +93,7 @@ class QuizSessionAnswerResponse(BaseModel):
     explanation: Optional[str] = None
     source_chunk_id: Optional[str] = None
     show_source_context: bool = False
-    model_score: Optional[int] = Field(default=None, ge=0, le=5)
+    model_score: Optional[int] = Field(default=None, ge=-1, le=5)
     verdict: Optional[str] = None
     should_remediate: bool = False
     concept_summary: Optional[str] = None
@@ -107,4 +107,3 @@ class QuizSessionAnswerResponse(BaseModel):
 class QuizSessionFinishResponse(BaseModel):
     status: str
     session_id: str
-

@@ -81,8 +81,8 @@ def test_grade_answer_fallback_on_invalid_json(monkeypatch) -> None:
         subject="dbms",
     )
 
-    assert result.score_0_5 == 3
-    assert result.verdict == "partially_correct"
-    assert result.should_remediate is True
-    assert result.concept_summary != ""
-    assert len(result.where_you_missed) >= 1
+    assert result.score_0_5 == -1
+    assert result.verdict == "grading_error"
+    assert result.should_remediate is False
+    assert result.concept_summary == ""
+    assert result.where_you_missed == []

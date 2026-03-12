@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 from src.llm import create_client
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -46,6 +49,33 @@ def _coerce_string_list(value: Any) -> list[str]:
     return out
 
 
+_QUESTION_TYPE_RUBRICS: Dict[str, str] = {
+    "definition": """Question type: Definition
+Evaluation focus:
+- Does the answer identify the core concept accurately?
+- Does it mention why the concept matters (purpose/motivation)?
+- Does it cover edge cases, failure implications, or trade-offs where relevant?
+- Deduct for superficial one-line answers that omit practical significance.""",
+    "procedural": """Question type: Procedural
+Evaluation focus:
+- Does the answer describe the correct sequence of steps or mechanism?
+- Are edge cases and error handling mentioned where appropriate?
+- Is the complexity (time/space) or practical constraints addressed?
+- Deduct for listing steps without explaining why each step matters.""",
+    "comparative": """Question type: Comparative
+Evaluation focus:
+- Does the answer clearly identify both items being compared?
+- Are specific dimensions of comparison stated (performance, use-case, trade-offs)?
+- Is there a clear conclusion about when to prefer each option?
+- Deduct for vague or one-sided comparisons.""",
+    "factual": """Question type: Factual
+Evaluation focus:
+- Is the stated fact correct and precise?
+- Are relevant qualifications or conditions mentioned?
+- Deduct for overly broad or imprecise statements that could mislead.""",
+}
+
+
 def _build_prompt(
     *,
     question: str,
@@ -53,8 +83,13 @@ def _build_prompt(
     user_answer: str,
     subject: Optional[str] = None,
     context_excerpt: Optional[str] = None,
+    question_type: Optional[str] = None,
+    atomic_facts: Optional[list[str]] = None,
 ) -> str:
-    subj = subject or "computer science (operating systems, databases, or computer networks)"
+    subj = (
+        subject
+        or "computer science (operating systems, databases, or computer networks)"
+    )
 
     parts = [
         f"You are grading a short-answer question in {subj}.",
@@ -66,6 +101,18 @@ def _build_prompt(
     ]
     if context_excerpt:
         parts.append("- An optional context excerpt from the source material.")
+
+    if atomic_facts:
+        parts.append("")
+        parts.append("Key facts the answer should cover:")
+        for fact in atomic_facts:
+            parts.append(f"- {fact}")
+        parts.append("")
+
+    qtype_rubric = _QUESTION_TYPE_RUBRICS.get((question_type or "").strip().lower(), "")
+    if qtype_rubric:
+        parts.append(qtype_rubric)
+        parts.append("")
 
     parts.append(
         """
@@ -129,11 +176,14 @@ def grade_answer(
     user_answer: str,
     subject: Optional[str] = None,
     context_excerpt: Optional[str] = None,
+    question_type: Optional[str] = None,
+    atomic_facts: Optional[list[str]] = None,
 ) -> GradeResult:
     """
     Grade a user's answer using the configured LLM client.
 
     Returns a GradeResult with a 0-5 score suitable for SM-2.
+    On LLM/parse failure returns verdict='grading_error' with score=-1.
     """
     prompt = _build_prompt(
         question=question,
@@ -141,10 +191,12 @@ def grade_answer(
         user_answer=user_answer,
         subject=subject,
         context_excerpt=context_excerpt,
+        question_type=question_type,
+        atomic_facts=atomic_facts,
     )
 
     client = create_client()
-    raw = client.generate_single(prompt, max_tokens=384, temperature=0.1)
+    raw = client.generate_single(prompt, max_tokens=1024, temperature=0.1)
 
     score = 3
     verdict = "partially_correct"
@@ -162,13 +214,24 @@ def grade_answer(
         missing = _coerce_string_list(data.get("missing_points", missing))
         incorrect = _coerce_string_list(data.get("incorrect_points", incorrect))
         concept_summary = str(data.get("concept_summary", concept_summary)).strip()
-        where_you_missed = _coerce_string_list(data.get("where_you_missed", where_you_missed))
+        where_you_missed = _coerce_string_list(
+            data.get("where_you_missed", where_you_missed)
+        )
         should_value = data.get("should_remediate", should_remediate)
         if isinstance(should_value, bool):
             should_remediate = should_value
     except Exception:
-        # If the model response is not valid JSON, fall back to a neutral score.
-        pass
+        logger.warning("Grader JSON parse failed, raw=%s", raw[:200])
+        return GradeResult(
+            score_0_5=-1,
+            verdict="grading_error",
+            missing_points=[],
+            incorrect_points=[],
+            concept_summary="",
+            where_you_missed=[],
+            should_remediate=False,
+        )
+
     verdict = _normalize_verdict(verdict, score=score)
     should_remediate = verdict != "correct"
     if not should_remediate:
@@ -176,14 +239,14 @@ def grade_answer(
         where_you_missed = []
     else:
         if not concept_summary:
-            concept_summary = (
-                "Your answer is partly aligned, but it misses key concepts from the reference answer."
-            )
+            concept_summary = "Your answer is partly aligned, but it misses key concepts from the reference answer."
         if not where_you_missed:
             combined = [*incorrect, *missing]
             where_you_missed = combined[:3]
         if not where_you_missed:
-            where_you_missed = ["Your answer missed key concepts needed for a complete explanation."]
+            where_you_missed = [
+                "Your answer missed key concepts needed for a complete explanation."
+            ]
 
     return GradeResult(
         score_0_5=score,
