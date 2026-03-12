@@ -232,6 +232,7 @@ class QuizSessionService:
         card_id: int,
         user_answer: str,
         response_time_ms: Optional[int] = None,
+        action: Optional[str] = None,
     ) -> SessionAnswerResult:
         canonical = state.current_card()
         if canonical is None:
@@ -251,16 +252,27 @@ class QuizSessionService:
                 max_len = 600
                 explanation = text[:max_len] + ("..." if len(text) > max_len else "")
 
-        subject = canonical.topic.name if canonical.topic else None  # type: ignore[union-attr]
-        grade = grade_answer(
-            question=presented.question,
-            reference_answer=presented.answer,
-            user_answer=user_answer,
-            subject=subject,
-            context_excerpt=explanation,
-            question_type=presented.question_type,
-            atomic_facts=getattr(presented, "atomic_facts", None),
-        )
+        if action == "dont_know":
+            grade = GradeResult(
+                score_0_5=0,
+                verdict="dont_know",
+                missing_points=[],
+                incorrect_points=[],
+                concept_summary="You chose not to answer. Review the reference answer below.",
+                where_you_missed=[],
+                should_remediate=True,
+            )
+        else:
+            subject = canonical.topic.name if canonical.topic else None  # type: ignore[union-attr]
+            grade = grade_answer(
+                question=presented.question,
+                reference_answer=presented.answer,
+                user_answer=user_answer,
+                subject=subject,
+                context_excerpt=explanation,
+                question_type=presented.question_type,
+                atomic_facts=getattr(presented, "atomic_facts", None),
+            )
 
         # When grading fails (score_0_5 == -1), skip SM-2 update entirely:
         # record a quality of 0 so the attempt is logged, but don't penalise
@@ -297,3 +309,15 @@ class QuizSessionService:
             should_remediate=grade.should_remediate,
             next_card=next_card,
         )
+
+    async def skip_current_card(
+        self,
+        *,
+        db: AsyncSession,
+        state: QuizSessionState,
+    ) -> Optional[Card]:
+        """Advance cursor without recording any attempt. Returns the next card (or None)."""
+        if state.completed:
+            raise ValueError("Session is already complete")
+        state.cursor += 1
+        return await self.get_current_presented_card(db=db, state=state)

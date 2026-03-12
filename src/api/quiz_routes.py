@@ -18,6 +18,7 @@ from src.skills.schemas import (
     QuizSessionAnswerRequest,
     QuizSessionAnswerResponse,
     QuizSessionFinishResponse,
+    QuizSessionSkipResponse,
     QuizSessionStartRequest,
     QuizSessionStartResponse,
     QuizStatsResponse,
@@ -233,6 +234,7 @@ async def answer_quiz_session(
             card_id=payload.card_id,
             user_answer=payload.user_answer,
             response_time_ms=payload.response_time_ms,
+            action=payload.action,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -254,6 +256,37 @@ async def answer_quiz_session(
         ),
         interval_days=outcome.updated_state.interval_days,
         next_card=_to_quiz_card(outcome.next_card) if outcome.next_card else None,
+        progress=_progress(state),
+    )
+
+
+@router.post("/sessions/{session_id}/skip", response_model=QuizSessionSkipResponse)
+async def skip_quiz_session_card(
+    session_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    request: Request,
+) -> QuizSessionSkipResponse:
+    store = _quiz_sessions_store(request)
+    state = store.get(session_id)
+    if state is None or state.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+        )
+
+    session_service = QuizSessionService(
+        chunks_by_id=getattr(request.app.state, "chunks_by_id", {}) or {}
+    )
+    try:
+        next_card = await session_service.skip_current_card(
+            db=db,
+            state=state,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    return QuizSessionSkipResponse(
+        next_card=_to_quiz_card(next_card) if next_card else None,
         progress=_progress(state),
     )
 

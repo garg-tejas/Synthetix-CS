@@ -54,6 +54,7 @@ export default function FeedbackPanel({
   }, [result.where_you_missed])
 
   const verdictTone = useMemo<FeedbackTone>(() => {
+    if (normalizedVerdict.includes('dont_know') || normalizedVerdict.includes("don't_know")) return 'warning'
     if (normalizedVerdict.includes('grading_error') || normalizedVerdict.includes('error')) return 'info'
     if (normalizedVerdict.includes('incorrect')) return 'danger'
     if (normalizedVerdict.includes('partial')) return 'warning'
@@ -101,6 +102,13 @@ export default function FeedbackPanel({
           ariaLabel="Model score"
         />
       </div>
+
+      {normalizedVerdict.includes('dont_know') ? (
+        <section className="review-feedback-panel__section">
+          <h4>Skipped — failed recall</h4>
+          <p>This card has been recorded as a missed recall. Review the reference answer below to reinforce the concept.</p>
+        </section>
+      ) : null}
 
       {normalizedVerdict.includes('grading_error') ? (
         <section className="review-feedback-panel__section">

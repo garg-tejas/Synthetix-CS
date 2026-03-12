@@ -6,6 +6,7 @@ import {
   answerQuizSession,
   finishQuizSession,
   getTopics,
+  skipQuizSession,
   startQuizSession,
 } from '../api/quiz'
 import type { QuizCard, QuizSessionAnswerResponse, SessionProgress } from '../api/types'
@@ -327,6 +328,67 @@ export default function ReviewPage() {
     }
   }
 
+  const onDontKnow = async () => {
+    if (!currentCard || !sessionId) return
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const started = attemptStartedAt ?? performance.now()
+      const responseTimeMs = Math.round(performance.now() - started)
+      const res = await answerQuizSession(sessionId, {
+        card_id: currentCard.card_id,
+        user_answer: '',
+        response_time_ms: responseTimeMs,
+        action: 'dont_know',
+      })
+      const verdict = normalizeVerdictBucket(res.verdict)
+      setResult(res)
+      setProgress(res.progress)
+      setSessionAttempts((previous) => [
+        ...previous,
+        {
+          score: typeof res.model_score === 'number' ? res.model_score : null,
+          verdict,
+          shouldRemediate:
+            typeof res.should_remediate === 'boolean'
+              ? res.should_remediate
+              : verdict !== 'correct',
+          topic: currentCard.topic,
+        },
+      ])
+    } catch (err) {
+      const apiErr = err as ApiError
+      setError(apiErr.detail || 'Failed to record answer')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const onSkip = async () => {
+    if (!sessionId) return
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const res = await skipQuizSession(sessionId)
+      setProgress(res.progress)
+      if (res.next_card) {
+        setCurrentCard(res.next_card)
+        setDisplayedIndex((previous) => previous + 1)
+        setUserAnswer('')
+        setResult(null)
+        setAttemptStartedAt(performance.now())
+      } else {
+        setCurrentCard(null)
+        setResult(null)
+      }
+    } catch (err) {
+      const apiErr = err as ApiError
+      setError(apiErr.detail || 'Failed to skip card')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const goToNextCard = () => {
     if (!result?.next_card) {
       setCurrentCard(null)
@@ -486,6 +548,22 @@ export default function ReviewPage() {
                   loadingLabel="Grading..."
                 >
                   Submit answer
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isSubmitting || !!result || !sessionId}
+                  onClick={onDontKnow}
+                >
+                  Don&apos;t know
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={isSubmitting || !!result || !sessionId}
+                  onClick={onSkip}
+                >
+                  Skip
                 </Button>
               </div>
 

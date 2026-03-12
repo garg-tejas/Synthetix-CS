@@ -90,6 +90,10 @@ class QuizSessionAnswerRequest(BaseModel):
     card_id: int
     user_answer: str
     response_time_ms: Optional[int] = Field(default=None, ge=0)
+    action: Optional[str] = Field(
+        default=None,
+        description="Optional action override. Use 'dont_know' to record a failed recall without LLM grading.",
+    )
 
 
 class QuizSessionAnswerResponse(BaseModel):
@@ -111,3 +115,8 @@ class QuizSessionAnswerResponse(BaseModel):
 class QuizSessionFinishResponse(BaseModel):
     status: str
     session_id: str
+
+
+class QuizSessionSkipResponse(BaseModel):
+    next_card: Optional[QuizCard] = None
+    progress: SessionProgress
