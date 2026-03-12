@@ -105,11 +105,15 @@ async def apply_seed(questions: List[Dict]) -> None:
 
     async with AsyncSessionLocal() as session:
         # 1) Ensure topics exist for each source_subject.
-        subjects = sorted({q.get("source_subject") for q in questions if q.get("source_subject")})
+        subjects = sorted(
+            {q.get("source_subject") for q in questions if q.get("source_subject")}
+        )
         print(f"\nDetected subjects: {subjects or ['(none)']}")
 
         if subjects:
-            result = await session.execute(select(Topic).where(Topic.name.in_(subjects)))
+            result = await session.execute(
+                select(Topic).where(Topic.name.in_(subjects))
+            )
             existing_topics = {t.name: t for t in result.scalars().all()}
 
             created_topics = []
@@ -182,6 +186,7 @@ async def apply_seed(questions: List[Dict]) -> None:
                     "source_subject": q.get("source_subject"),
                     "quality_score": q.get("quality_score"),
                 },
+                atomic_facts=q.get("atomic_facts"),
             )
             session.add(card)
             inserted += 1

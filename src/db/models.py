@@ -25,8 +25,12 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False, index=True
+    )
+    username: Mapped[str] = mapped_column(
+        String(64), unique=True, nullable=False, index=True
+    )
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True),
@@ -44,7 +48,9 @@ class Topic(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     # os, cn, dbms for now
-    name: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(
+        String(32), unique=True, nullable=False, index=True
+    )
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     cards: Mapped[List["Card"]] = relationship(back_populates="topic")
@@ -54,7 +60,9 @@ class Card(Base):
     __tablename__ = "cards"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    topic_id: Mapped[int] = mapped_column(ForeignKey("topics.id"), nullable=False, index=True)
+    topic_id: Mapped[int] = mapped_column(
+        ForeignKey("topics.id"), nullable=False, index=True
+    )
 
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
@@ -63,18 +71,25 @@ class Card(Base):
     question_type: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
     # Links back to the RAG chunk this card was generated from
-    source_chunk_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    source_chunk_id: Mapped[Optional[str]] = mapped_column(
+        String(128), nullable=True, index=True
+    )
 
     # Optional comma-separated tags for future filtering
     tags: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    topic_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    topic_key: Mapped[Optional[str]] = mapped_column(
+        String(128), nullable=True, index=True
+    )
     variant_of_card_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("cards.id"),
         nullable=True,
         index=True,
     )
-    generation_origin: Mapped[str] = mapped_column(String(32), nullable=False, default="seed")
+    generation_origin: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="seed"
+    )
     provenance_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    atomic_facts: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
 
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True),
@@ -110,13 +125,19 @@ class ReviewState(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
-    card_id: Mapped[int] = mapped_column(ForeignKey("cards.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
+    card_id: Mapped[int] = mapped_column(
+        ForeignKey("cards.id"), nullable=False, index=True
+    )
 
     repetitions: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     interval_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     ease_factor: Mapped[float] = mapped_column(default=2.5, nullable=False)
-    due_at: Mapped[Optional[dt.datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    due_at: Mapped[Optional[dt.datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     last_reviewed_at: Mapped[Optional[dt.datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
@@ -131,8 +152,12 @@ class ReviewAttempt(Base):
     __tablename__ = "review_attempts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
-    card_id: Mapped[int] = mapped_column(ForeignKey("cards.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
+    card_id: Mapped[int] = mapped_column(
+        ForeignKey("cards.id"), nullable=False, index=True
+    )
     served_card_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("cards.id"),
         nullable=True,
@@ -169,7 +194,9 @@ class TopicTaxonomyNode(Base):
     topic_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     display_name: Mapped[str] = mapped_column(String(128), nullable=False)
     parent_topic_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    source: Mapped[str] = mapped_column(String(32), nullable=False, default="deterministic")
+    source: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="deterministic"
+    )
     metadata_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True),
@@ -198,9 +225,13 @@ class TopicPrerequisite(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     subject: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     topic_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
-    prerequisite_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    prerequisite_key: Mapped[str] = mapped_column(
+        String(128), nullable=False, index=True
+    )
     weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
-    source: Mapped[str] = mapped_column(String(32), nullable=False, default="deterministic")
+    source: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="deterministic"
+    )
     evidence_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True),
@@ -218,11 +249,15 @@ class TopicPrerequisite(Base):
 class UserTopicMastery(Base):
     __tablename__ = "user_topic_mastery"
     __table_args__ = (
-        UniqueConstraint("user_id", "subject", "topic_key", name="uq_user_topic_mastery"),
+        UniqueConstraint(
+            "user_id", "subject", "topic_key", name="uq_user_topic_mastery"
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
     subject: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     topic_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -256,16 +291,22 @@ class UserTopicSWOT(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
     subject: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     topic_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     strength_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     weakness_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     opportunity_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     threat_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    primary_bucket: Mapped[str] = mapped_column(String(16), nullable=False, default="opportunity")
+    primary_bucket: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="opportunity"
+    )
     rationale: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    source: Mapped[str] = mapped_column(String(32), nullable=False, default="rule_hybrid")
+    source: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="rule_hybrid"
+    )
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True),
         default=dt.datetime.utcnow,

@@ -41,7 +41,9 @@ class QuizSessionState:
     served_card_ids_by_index: Dict[int, int] = field(default_factory=dict)
     path_nodes: List[PathNode] = field(default_factory=list)
     cursor: int = 0
-    created_at: dt.datetime = field(default_factory=lambda: dt.datetime.now(dt.timezone.utc))
+    created_at: dt.datetime = field(
+        default_factory=lambda: dt.datetime.now(dt.timezone.utc)
+    )
 
     @property
     def total(self) -> int:
@@ -194,7 +196,9 @@ class QuizSessionService:
             if cached is not None:
                 return cached
             served_result = await db.execute(
-                select(Card).options(selectinload(Card.topic)).where(Card.id == cached_served_id)
+                select(Card)
+                .options(selectinload(Card.topic))
+                .where(Card.id == cached_served_id)
             )
             loaded = served_result.scalar_one_or_none()
             if loaded is not None:
@@ -251,14 +255,21 @@ class QuizSessionService:
             user_answer=user_answer,
             subject=subject,
             context_excerpt=explanation,
+            question_type=presented.question_type,
+            atomic_facts=getattr(presented, "atomic_facts", None),
         )
+
+        # When grading fails (score_0_5 == -1), skip SM-2 update entirely:
+        # record a quality of 0 so the attempt is logged, but don't penalise
+        # the spaced-repetition state with a nonsensical value.
+        sm2_quality = grade.score_0_5 if grade.score_0_5 >= 0 else 0
 
         review_state = state.review_states_by_card.get(canonical.id)
         updated_state, attempt = self.quiz_service.record_attempt(
             user_id=state.user_id,
             card=canonical,
             review_state=review_state,
-            quality=grade.score_0_5,
+            quality=sm2_quality,
             served_card_id=presented.id,
             response_time_ms=response_time_ms,
         )
