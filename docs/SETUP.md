@@ -221,6 +221,7 @@ Open the app at `http://localhost:5173`.
 - `POST /api/search` - retrieval only
 - `POST /api/chat` - non-streaming RAG answer
 - `POST /api/chat/stream` - streaming RAG answer (SSE)
+- `DELETE /api/conversation` - clear a RAG conversation (pass `?conversation_id=...`)
 
 #### 11.3 Quiz endpoints
 
@@ -228,7 +229,8 @@ All quiz endpoints require a Bearer token from the auth routes.
 
 - `GET /api/quiz/topics` - list topics and total card counts
 - `POST /api/quiz/sessions/start` - start a review session and return scoped path + first card
-- `POST /api/quiz/sessions/{session_id}/answer` - submit answer for current session card
+- `POST /api/quiz/sessions/{session_id}/answer` - submit answer for current session card. Accepts optional `action: "dont_know"` to record a failed recall (SM-2 quality=0) without LLM grading.
+- `POST /api/quiz/sessions/{session_id}/skip` - skip current card without recording an attempt; advances cursor and returns next card
 - `POST /api/quiz/sessions/{session_id}/finish` - finish session and close server-side state
 - `GET /api/quiz/stats` - per-topic stats (total, learned, due today, overdue)
 

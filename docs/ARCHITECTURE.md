@@ -90,6 +90,21 @@ sequenceDiagram
     SessionService->>DB: Update ReviewState, create ReviewAttempt
     SessionService-->>QuizAPI: next_card, feedback
     QuizAPI-->>ReviewPage: answer, verdict, next_card
+
+    User->>ReviewPage: Click "Don't know"
+    ReviewPage->>QuizAPI: POST /sessions/id/answer {action: "dont_know"}
+    QuizAPI->>SessionService: answer_card (action=dont_know)
+    SessionService->>SessionService: Fixed GradeResult(score=0, verdict=dont_know)
+    SessionService->>DB: Update ReviewState (SM-2 quality=0), create ReviewAttempt
+    SessionService-->>QuizAPI: next_card, feedback with reference answer
+    QuizAPI-->>ReviewPage: verdict=dont_know, next_card
+
+    User->>ReviewPage: Click "Skip"
+    ReviewPage->>QuizAPI: POST /sessions/id/skip
+    QuizAPI->>SessionService: skip_current_card
+    SessionService->>SessionService: Advance cursor (no DB writes)
+    SessionService-->>QuizAPI: next_card, progress
+    QuizAPI-->>ReviewPage: next_card (no feedback shown)
 ```
 
 ## RAG Pipeline
@@ -162,6 +177,15 @@ erDiagram
         string question
         string answer
         string topic_key
+        string difficulty
+        string question_type
+        int source_chunk_id FK
+        json tags
+        int variant_of_card_id FK
+        string generation_origin
+        json provenance_json
+        json atomic_facts
+        datetime created_at
     }
 
     ReviewState {
@@ -170,6 +194,10 @@ erDiagram
         int card_id FK
         int interval_days
         datetime due_at
+        int repetitions
+        float ease_factor
+        datetime last_reviewed_at
+        int lapses
     }
 
     UserTopicMastery {

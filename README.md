@@ -35,20 +35,22 @@ Result: one system for understanding concepts, practicing recall, and prioritizi
 **Retrieval (RAG)**
 
 - Hybrid search: BM25 + dense retrieval + RRF fusion with optional cross-encoder reranking
-- Citation-backed answers: Generated responses include `[n]` citations mapped to source chunks
-- Query enhancement: Rewriting and optional HYDE expansion for better retrieval
+- Citation-backed answers: Generated responses include `[n]` citations mapped to source chunks, with citation validation and grounding checks
+- Query enhancement: Rewriting, subject-aware HYDE expansion, and follow-up query reformulation for multi-turn conversations
 
 **Adaptive Quizzing**
 
-- Session startup: Prioritizes due cards, fills with new cards, optional topic/subject scoping
-- LLM grading: Each answer gets a 0-5 quality score, concept summary, and targeted feedback
-- SM-2 spaced repetition: Review scheduling based on performance with ease factor and interval tracking
+- Session startup: Prioritizes due cards, fills with new cards, optional topic/subject scoping, difficulty filter (easy/medium/hard)
+- LLM grading: Each answer gets a 0-5 quality score, concept summary, and targeted feedback (type-aware rubrics)
+- SM-2 spaced repetition: Review scheduling with proportional interval reset on lapse and ease factor tracking
+- "Don't know" button: Failed recall without LLM grading (SM-2 quality=0, shows reference answer)
+- Skip button: Advance to next card without recording an attempt or changing SRS state
 
 **Learning Path**
 
 - Prerequisite-aware ordering: Topics unlock based on completed dependencies
-- Mastery + SWOT modeling: Per-topic signals drive priority (weakness/threat/opportunity/strength)
-- Runtime card variants: Reduces memorization while preserving concept coverage
+- Mastery + SWOT modeling: Per-topic signals drive priority (weakness/threat/opportunity/strength), configurable via `SWOTConfig`
+- Runtime card variants: Quality-gated generation ensures only interview-worthy variants are persisted
 
 **Infrastructure**
 
@@ -75,7 +77,7 @@ Result: one system for understanding concepts, practicing recall, and prioritizi
 - Input signal: LLM grader outputs a `quality` score in `[0, 5]`.
 - Failure path (`quality < 3`):
   - repetitions reset to `0`,
-  - interval set to `1` day,
+  - interval proportionally reset: `max(1, min(interval // 2, 7))` (e.g., interval 6 -> 3, interval 30 -> 7),
   - lapses increment.
 - Success path (`quality >= 3`):
   - ease factor updated with classic SM-2 delta formula,
@@ -153,12 +155,12 @@ tests/     Backend test suite
 Typical flow:
 
 1. Configure `.env` (Postgres, OpenAI-compatible API key, JWT secret)
-2. Run migrations: `alembic upgrade head`
-3. Generate questions: `python -m eval.generation`
-4. Seed cards: `python -m scripts.seed_cards`
-5. Sync topic graph: `python -m scripts.sync_topic_dependency_graph`
-6. Start backend: `uvicorn src.main:app --reload`
-7. Start frontend: `cd frontend && npm run dev`
+2. Run migrations: `uv run alembic upgrade head`
+3. Generate questions: `uv run python -m eval.generation.batch_generate --subject os`
+4. Seed cards: `uv run python -m scripts.seed_cards --input <validated_jsonl> --apply`
+5. Sync topic graph: `uv run python -m scripts.sync_topic_dependency_graph --subject os --replace-subject`
+6. Start backend: `uv run uvicorn src.api.main:app --reload`
+7. Start frontend: `cd frontend && pnpm dev`
 
 See `docs/SETUP.md` for detailed instructions.
 
