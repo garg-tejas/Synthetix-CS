@@ -63,7 +63,7 @@ You can verify the tables exist with:
 uv run python -m scripts.check_db
 ```
 
-You should see at least `users`, `topics`, `cards`, `review_states`, and `review_attempts`.
+You should see `users`, `topics`, `cards`, `review_states`, `review_attempts`, `topic_taxonomy_nodes`, `topic_prerequisites`, `user_topic_mastery`, and `user_topic_swot`.
 
 ### 6. Ensure chunks exist
 

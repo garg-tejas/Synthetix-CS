@@ -263,6 +263,31 @@ flowchart LR
     SyncGraph --> DB
 ```
 
+## New User Flow and Card Loading
+
+For a new user, cards are loaded on demand. There is no pre-warming. The flow:
+
+1. **Dashboard** — `getStats()` and `getTopics()` run. `getTopics()` returns topic names from `Topic` that have at least one `Card`. If the DB has no cards (no seed run), `availableTopics` is empty and "Start with selection" is disabled.
+2. **Setup** — User picks topics and limit, then clicks "Preview learning path". This goes to Learning Path.
+3. **Learning Path** — Calls `startQuizSession` to preview. The backend:
+   - Loads cards filtered by topics
+   - Calls `refresh_user_swot` (creates `UserTopicMastery` and `UserTopicSWOT` for this user from the cards)
+   - Calls `path_planner.build_path` (builds path from mastery, SWOT, taxonomy, prerequisites)
+   - Calls `quiz_service.get_next_cards` (for a new user, all cards are "new" since they have no `ReviewState`)
+   - Returns path nodes and the first card
+4. **Review** — User either clicks a node or "Start anyway". `startQuizSession` runs again with the same scope; cards are served in path order.
+
+**Why a new user may see no cards or be blocked:**
+
+- **No cards seeded** — If `scripts.seed_cards --apply` was never run, `getTopics()` returns `[]`, the dashboard shows "No topics available", and the user cannot start.
+- **Topic dependency graph not synced** — If `sync_topic_dependency_graph` was never run, `topic_taxonomy_nodes` and `topic_prerequisites` are empty. The path planner still uses mastery and SWOT, which are created by `refresh_user_swot` during the first `getStats()` or session start, so path nodes are built. Cards are still returned.
+- **Empty path** — When `path_nodes` is empty, the Learning Path page shows "No path nodes available" and "Start anyway". That sends the user to Review with `topics` in state; the backend loads cards with no path ordering.
+- **Direct `/review` without state** — If the user opens `/review` with no route state (e.g. bookmark, back), `orderedTopics` is empty and the request has `topics: undefined`. The backend then loads all cards with no topic filter, so cards are still returned.
+
+**Summary:** New users get cards as long as the DB has been seeded. The main blocker is an empty DB (no seed). Ensure `seed_cards --apply` has been run before testing with a new user.
+
+---
+
 ## Key Directories
 
 | Path                | Purpose                                             |

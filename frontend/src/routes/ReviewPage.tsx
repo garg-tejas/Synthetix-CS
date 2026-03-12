@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import type { ApiError } from '../api/client'
-import { answerQuizSession, finishQuizSession, startQuizSession } from '../api/quiz'
+import {
+  answerQuizSession,
+  finishQuizSession,
+  getTopics,
+  startQuizSession,
+} from '../api/quiz'
 import type { QuizCard, QuizSessionAnswerResponse, SessionProgress } from '../api/types'
 import PageHeader from '../components/layout/PageHeader'
 import FeedbackPanel from '../components/review/FeedbackPanel'
@@ -229,11 +234,17 @@ export default function ReviewPage() {
       setUserAnswer('')
       setSessionAttempts([])
       try {
-        const topics = orderedTopics.length > 0 ? orderedTopics : undefined
+        let topics: string[] | undefined =
+          orderedTopics.length > 0 ? orderedTopics : undefined
+        if (topics === undefined) {
+          const topicsList = await getTopics()
+          const names = (topicsList || []).map((t) => t.topic).filter(Boolean)
+          topics = names.length > 0 ? names : undefined
+        }
         const subject = routeState?.subject || undefined
         const requestedLimit = typeof routeState?.limit === 'number' ? clampLimit(routeState.limit) : 10
         const pathTopicsOrdered =
-          orderedTopics.length > 0 ? orderedTopics : undefined
+          orderedTopics.length > 0 ? orderedTopics : topics
         const data = await startQuizSession({
           limit: requestedLimit,
           topics,
