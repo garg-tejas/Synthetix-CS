@@ -483,7 +483,7 @@ export default function ReviewPage() {
                   type="submit"
                   disabled={isSubmitting || !!result || !sessionId}
                   loading={isSubmitting}
-                  loadingLabel="Submitting..."
+                  loadingLabel="Grading..."
                 >
                   Submit answer
                 </Button>
