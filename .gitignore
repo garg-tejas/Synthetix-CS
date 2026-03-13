@@ -1,6 +1,7 @@
 # Python-generated files
 __pycache__/
 .pytest_cache/
+.ruff_cache
 *.py[oc]
 build/
 dist/
@@ -11,7 +12,8 @@ wheels/
 .venv
 
 # Environment variables
-.env
+*.env
+!env.example
 
 # pdfs, mmds of the 9 source books
 books/
@@ -28,10 +30,5 @@ frontend/dist/
 frontend/.env
 frontend/.env.local
 
-# Evaluation artifacts (keep only canonical topic graph outputs in git)
+# Evaluation artifacts
 eval/generation/output/*
-!eval/generation/output/generated_questions.validated.jsonl
-!eval/generation/output/topic_graph.validated.json
-!eval/generation/output/topic_graph.os.validated.json
-!eval/generation/output/topic_graph.dbms.validated.json
-!eval/generation/output/topic_graph.cn.validated.json
