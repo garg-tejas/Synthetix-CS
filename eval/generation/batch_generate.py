@@ -13,6 +13,7 @@ from typing import List, Optional
 
 from src.llm.client import ModelScopeClient, create_client
 from src.rag.index import ChunkRecord, load_chunks
+
 from .chunk_selector import select_chunks_for_generation
 from .generate_qa import generate_questions_batch
 
@@ -27,7 +28,7 @@ def filter_chunks_for_generation(
 ) -> List[ChunkRecord]:
     """
     Filter chunks suitable for question generation.
-    
+
     Excludes exercise, references, etc. Focuses on definition, algorithm, section, protocol.
     """
     if chunk_types is None:
@@ -54,7 +55,7 @@ def filter_chunks_for_generation(
             continue
 
         if subject:
-            inferred = (chunk.subject or _infer_subject_simple(chunk))
+            inferred = chunk.subject or _infer_subject_simple(chunk)
             if inferred != subject:
                 continue
 
@@ -66,6 +67,7 @@ def filter_chunks_for_generation(
 def _infer_subject_simple(chunk: ChunkRecord) -> str:
     """Simple subject inference."""
     from .generate_qa import _infer_subject
+
     return _infer_subject(chunk)
 
 
@@ -169,8 +171,8 @@ def main() -> None:
     parser.add_argument(
         "--batch-delay",
         type=float,
-        default=5.0,
-        help="Seconds to wait between batches (default: 5; use e.g. 45 for strict rate limits)",
+        default=0,
+        help="Seconds to wait between batches (default: 0; use e.g. 45 for strict rate limits)",
     )
     parser.add_argument(
         "--min-score",
@@ -225,7 +227,9 @@ def main() -> None:
         if processed_ids:
             before = len(filtered_chunks)
             filtered_chunks = [c for c in filtered_chunks if c.id not in processed_ids]
-            print(f"Resuming: {len(processed_ids)} chunks already in checkpoint, {len(filtered_chunks)} remaining")
+            print(
+                f"Resuming: {len(processed_ids)} chunks already in checkpoint, {len(filtered_chunks)} remaining"
+            )
             if not filtered_chunks:
                 print("Nothing left to process. Use --reset to start over.")
                 return
@@ -251,7 +255,9 @@ def main() -> None:
             model_name=args.model,
             modelscope_token=args.modelscope_token,
         )
-        calls_per_chunk = 1 + (1 if args.quality_mode in {"llm_hybrid", "llm_only"} else 0)
+        calls_per_chunk = 1 + (
+            1 if args.quality_mode in {"llm_hybrid", "llm_only"} else 0
+        )
         print(f"Using model: {llm_client.model_name} ({llm_client.base_url})")
         print(
             "Estimated calls: "
@@ -271,7 +277,11 @@ def main() -> None:
     if args.quality_mode in {"llm_hybrid", "llm_only"}:
         print(f"LLM rewrite: {'disabled' if args.no_llm_rewrite else 'enabled'}")
 
-    all_questions: List[dict] = load_existing_questions(args.checkpoint) if (args.checkpoint.exists() and not args.reset) else []
+    all_questions: List[dict] = (
+        load_existing_questions(args.checkpoint)
+        if (args.checkpoint.exists() and not args.reset)
+        else []
+    )
     processed_this_run = 0
 
     for i in range(0, len(filtered_chunks), args.batch_size):
@@ -293,9 +303,13 @@ def main() -> None:
             all_questions.extend(batch_questions)
             processed_this_run += len(batch)
 
-            print(f"  Generated {len(batch_questions)} questions from {len(batch)} chunks")
+            print(
+                f"  Generated {len(batch_questions)} questions from {len(batch)} chunks"
+            )
             if len(batch_questions) == 0:
-                print(f"  Warning: No questions generated. Check LLM responses and parsing logic.")
+                print(
+                    f"  Warning: No questions generated. Check LLM responses and parsing logic."
+                )
 
             save_checkpoint(args.checkpoint, all_questions)
 
@@ -327,7 +341,10 @@ def main() -> None:
         print("  2. Validate and filter:")
         print("     uv run python -m eval.generation.validate_qa", args.checkpoint)
         print("  3. Import into questions.jsonl:")
-        print("     uv run python -m eval.dataset.build_questions import-from-llm", args.checkpoint)
+        print(
+            "     uv run python -m eval.dataset.build_questions import-from-llm",
+            args.checkpoint,
+        )
 
 
 if __name__ == "__main__":

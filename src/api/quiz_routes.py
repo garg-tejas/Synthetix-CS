@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, List
+from typing import Annotated, List, Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
@@ -36,7 +36,7 @@ async def _refresh_swot_snapshot(
     *,
     db: AsyncSession,
     user_id: int,
-    cards: list[Card],
+    cards: Sequence[Card],
 ) -> None:
     if not cards:
         return

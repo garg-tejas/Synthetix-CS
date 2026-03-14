@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from dataclasses import dataclass
 from statistics import mean
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -257,7 +257,7 @@ class MasterySWOTEngine:
                 "opportunity": opportunity,
                 "threat": threat,
             }
-            primary_bucket = max(bucket_scores, key=bucket_scores.get)
+            primary_bucket = max(bucket_scores, key=lambda k: bucket_scores[k])
             rationale = (
                 f"mastery={mastery_score:.1f}, avg_quality={avg_quality:.2f}, "
                 f"attempts={attempt_count}, lapses={lapse_count}, "
@@ -365,9 +365,9 @@ async def refresh_user_swot(
     *,
     db: AsyncSession,
     user_id: int,
-    cards: list[Card],
-    review_states: list[ReviewState],
-    review_attempts: list[ReviewAttempt],
+    cards: Sequence[Card],
+    review_states: Sequence[ReviewState],
+    review_attempts: Sequence[ReviewAttempt],
     now: Optional[dt.datetime] = None,
 ) -> tuple[dict[tuple[str, str], MasterySnapshot], dict[tuple[str, str], SWOTSnapshot]]:
     engine = MasterySWOTEngine()

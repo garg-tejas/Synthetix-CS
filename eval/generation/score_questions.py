@@ -75,10 +75,13 @@ def _finalize_row(row: dict) -> dict:
     if structural.reasons:
         row["structural_quality_reasons"] = structural.reasons
 
-    llm_score = row.get("llm_interview_score")
-    try:
-        llm_score_int = int(llm_score)
-    except (TypeError, ValueError):
+    llm_score_raw = row.get("llm_interview_score")
+    if llm_score_raw is not None:
+        try:
+            llm_score_int = int(llm_score_raw)
+        except (TypeError, ValueError):
+            llm_score_int = 0
+    else:
         llm_score_int = 0
     llm_score_int = max(0, min(100, llm_score_int))
 
@@ -95,17 +98,28 @@ def _estimate_row_chars(row: dict) -> int:
     difficulty = str(row.get("difficulty") or "")
     source_subject = str(row.get("source_subject") or "")
     source_header = str(row.get("source_header") or "")
-    return len(query) + len(question_type) + len(difficulty) + len(source_subject) + len(source_header) + 96
+    return (
+        len(query)
+        + len(question_type)
+        + len(difficulty)
+        + len(source_subject)
+        + len(source_header)
+        + 96
+    )
 
 
-def _build_batches(rows: List[dict], *, max_items: int, max_chars: int) -> List[List[dict]]:
+def _build_batches(
+    rows: List[dict], *, max_items: int, max_chars: int
+) -> List[List[dict]]:
     batches: List[List[dict]] = []
     current: List[dict] = []
     current_chars = 0
 
     for row in rows:
         row_chars = _estimate_row_chars(row)
-        if current and (len(current) >= max_items or current_chars + row_chars > max_chars):
+        if current and (
+            len(current) >= max_items or current_chars + row_chars > max_chars
+        ):
             batches.append(current)
             current = []
             current_chars = 0
@@ -119,10 +133,13 @@ def _build_batches(rows: List[dict], *, max_items: int, max_chars: int) -> List[
 
 def _should_keep(row: dict, min_quality_score: int) -> bool:
     decision = str(row.get("llm_review_decision") or "").strip().lower()
-    score = row.get("quality_score")
-    try:
-        score_int = int(score)
-    except (TypeError, ValueError):
+    score_raw = row.get("quality_score")
+    if score_raw is not None:
+        try:
+            score_int = int(score_raw)
+        except (TypeError, ValueError):
+            score_int = 0
+    else:
         score_int = 0
     return decision in {"keep", "rewrite"} and score_int >= min_quality_score
 
@@ -201,8 +218,8 @@ def main() -> None:
     parser.add_argument(
         "--batch-delay",
         type=float,
-        default=1.5,
-        help="Delay seconds between LLM requests (default: 1.5)",
+        default=0,
+        help="Delay seconds between LLM requests (default: 0)",
     )
     parser.add_argument(
         "--max-batches",
@@ -238,8 +255,12 @@ def main() -> None:
         return
 
     output_path = args.output or args.input_file.with_suffix(".scored.jsonl")
-    rejected_path = args.rejected_output or args.input_file.with_suffix(".rejected.jsonl")
-    checkpoint_path = args.checkpoint or args.input_file.with_suffix(".llm_checkpoint.jsonl")
+    rejected_path = args.rejected_output or args.input_file.with_suffix(
+        ".rejected.jsonl"
+    )
+    checkpoint_path = args.checkpoint or args.input_file.with_suffix(
+        ".llm_checkpoint.jsonl"
+    )
 
     if args.reset and checkpoint_path.exists():
         checkpoint_path.unlink()
@@ -295,10 +316,7 @@ def main() -> None:
     else:
         print("No existing checkpoint rows found")
 
-    pending = [
-        q for q in indexed_questions
-        if q["_row_index"] not in scored_by_index
-    ]
+    pending = [q for q in indexed_questions if q["_row_index"] not in scored_by_index]
     print(f"Pending rows: {len(pending)} / {len(indexed_questions)}")
 
     pending_batches = _build_batches(
@@ -335,7 +353,9 @@ def main() -> None:
                 failed = dict(row)
                 failed["llm_review_decision"] = "reject"
                 failed["llm_interview_score"] = 0
-                failed["llm_interview_reasons"] = [f"Batch exception: {_truncate_error(e)}"]
+                failed["llm_interview_reasons"] = [
+                    f"Batch exception: {_truncate_error(e)}"
+                ]
                 failed["quality_score"] = 0
                 fallback_rows.append(failed)
             outcome = LLMBatchScoreOutcome(
@@ -381,7 +401,9 @@ def main() -> None:
         scored_rows.append(row)
 
     if missing_after_run:
-        print(f"Warning: {missing_after_run} rows were not scored and were marked rejected.")
+        print(
+            f"Warning: {missing_after_run} rows were not scored and were marked rejected."
+        )
 
     accepted: List[dict] = []
     rejected: List[dict] = []
@@ -395,9 +417,13 @@ def main() -> None:
     missing_acc = _count_missing_required(accepted, required_fields)
     missing_rej = _count_missing_required(rejected, required_fields)
     if any(v > 0 for v in missing_acc.values()):
-        print(f"Warning: accepted set has missing required fields counts: {missing_acc}")
+        print(
+            f"Warning: accepted set has missing required fields counts: {missing_acc}"
+        )
     if any(v > 0 for v in missing_rej.values()):
-        print(f"Warning: rejected set has missing required fields counts: {missing_rej}")
+        print(
+            f"Warning: rejected set has missing required fields counts: {missing_rej}"
+        )
 
     def _clean(row: dict) -> dict:
         return {k: v for k, v in row.items() if k != "_row_index"}

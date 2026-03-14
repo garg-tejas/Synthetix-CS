@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import logging
 import os
+import random
 import time
 from pathlib import Path
 from typing import Iterator, List, Optional
 
-import random
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -64,7 +64,9 @@ class ModelScopeClient:
         base_url: Optional[str] = None,
     ):
         if OpenAI is None:
-            raise ImportError("openai not installed. Install with: uv pip install openai")
+            raise ImportError(
+                "openai not installed. Install with: uv pip install openai"
+            )
 
         self.model_name, api_key, self.base_url = _resolve_client_params(
             model_name=model_name, api_token=api_token, base_url=base_url
@@ -85,7 +87,9 @@ class ModelScopeClient:
         max_retries: int = 3,
     ) -> str:
         """Generate text for a single prompt."""
-        results = self.generate([prompt], max_tokens, temperature, top_p, stop, max_retries)
+        results = self.generate(
+            [prompt], max_tokens, temperature, top_p, stop, max_retries
+        )
         return results[0] if results else ""
 
     def generate(
@@ -104,7 +108,7 @@ class ModelScopeClient:
             while retry_count < max_retries:
                 try:
                     # Z.AI supports only one stop word; pass at most one to avoid empty/invalid response
-                    stop_param = (stop[:1] if stop else None)
+                    stop_param = stop[:1] if stop else None
                     create_kw: dict = {
                         "model": self.model_name,
                         "messages": [{"role": "user", "content": prompt}],
@@ -123,7 +127,9 @@ class ModelScopeClient:
                         msg = response.choices[0].message
                         generated_text = msg.content or ""
                         # Z.AI may put output in reasoning_content when thinking is enabled
-                        if not generated_text.strip() and getattr(msg, "reasoning_content", None):
+                        if not generated_text.strip() and getattr(
+                            msg, "reasoning_content", None
+                        ):
                             generated_text = (msg.reasoning_content or "").strip()
                         if not generated_text.strip():
                             logger.warning(
@@ -136,26 +142,28 @@ class ModelScopeClient:
                         logger.warning("Empty response from API for prompt %s", i + 1)
                         results.append("")
 
-                    # Rate limiting: delay between requests to avoid concurrency limits
-                    if i < len(prompts) - 1:
-                        delay = 2.0 + random.uniform(0, 1.0)
-                        time.sleep(delay)
-                    
                     break
 
                 except Exception as e:
                     error_str = str(e)
                     # Check for rate limit errors
-                    if "429" in error_str or "concurrency" in error_str.lower() or "1302" in error_str:
+                    if (
+                        "429" in error_str
+                        or "concurrency" in error_str.lower()
+                        or "1302" in error_str
+                    ):
                         retry_count += 1
                         if retry_count >= max_retries:
-                            logger.warning("Rate limit exceeded after %s retries. Skipping prompt.", max_retries)
+                            logger.warning(
+                                "Rate limit exceeded after %s retries. Skipping prompt.",
+                                max_retries,
+                            )
                             results.append("")
                             # Longer delay before continuing to next prompt
                             time.sleep(10 + random.uniform(0, 5))
                             break
                         # Exponential backoff with jitter for concurrency limits
-                        backoff = (2 ** retry_count) * 3 + random.uniform(0, 3)
+                        backoff = (2**retry_count) * 3 + random.uniform(0, 3)
                         logger.warning(
                             "Rate limit hit (429/concurrency). Retrying in %s s (attempt %s/%s)",
                             round(backoff, 1),
@@ -180,7 +188,7 @@ class ModelScopeClient:
         stop: Optional[List[str]] = None,
     ) -> Iterator[str]:
         """Stream text generation for a single prompt."""
-        stop_param = (stop[:1] if stop else None)
+        stop_param = stop[:1] if stop else None
         stream_kw: dict = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],

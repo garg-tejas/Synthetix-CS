@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence
+from typing import Iterable, List, Optional, Sequence, cast
 
 from src.db.models import Card, ReviewAttempt, ReviewState, Topic
-from src.skills.scheduler import SM2Scheduler
+from src.skills.scheduler import SM2Scheduler, SupportsSM2State
 
 
 @dataclass
@@ -71,11 +71,7 @@ class QuizService:
                     filtered_cards.append(card)
 
         # Map of card_id -> ReviewState for this user.
-        user_states = {
-            rs.card_id: rs
-            for rs in review_states
-            if rs.user_id == user_id
-        }
+        user_states = {rs.card_id: rs for rs in review_states if rs.user_id == user_id}
 
         # 1) Due cards: states with due_at <= now.
         due_cards: List[Card] = []
@@ -138,7 +134,11 @@ class QuizService:
             )
 
         # Update spaced-repetition state using SM-2.
-        updated_state = self.scheduler.compute_next(state, quality=quality, now=now)
+        # ReviewState satisfies SupportsSM2State at runtime (Mapped[int] → int),
+        # but static checkers can't see through SQLAlchemy descriptors.
+        updated_state: ReviewState = self.scheduler.compute_next(  # type: ignore[assignment]
+            cast(SupportsSM2State, state), quality=quality, now=now
+        )
 
         attempt = ReviewAttempt(
             user_id=user_id,
@@ -212,7 +212,13 @@ class QuizService:
             topic_name = topic_for_card.get(rs.card_id) or "unknown"
             entry = stats.setdefault(
                 topic_name,
-                {"topic": topic_name, "total": 0, "learned": 0, "due_today": 0, "overdue": 0},
+                {
+                    "topic": topic_name,
+                    "total": 0,
+                    "learned": 0,
+                    "due_today": 0,
+                    "overdue": 0,
+                },
             )
 
             if rs.repetitions > 0:
@@ -228,4 +234,3 @@ class QuizService:
                 entry["due_today"] += 1
 
         return list(stats.values())
-

@@ -64,7 +64,9 @@ def _topic_rows(block: Dict[str, Any], *, subject: str) -> List[Tuple[str, str]]
         seen.add(topic_key)
         display_name = str(row.get("display_name") or "").strip()
         if not display_name:
-            display_name = topic_key.split(":", 1)[-1].replace("-", " ").replace("_", " ").title()
+            display_name = (
+                topic_key.split(":", 1)[-1].replace("-", " ").replace("_", " ").title()
+            )
         out.append((topic_key, display_name))
     return out
 
@@ -128,32 +130,54 @@ async def _apply_for_subject(
         if replace_subject:
             if dry_run:
                 existing_topics_count = (
-                    await session.execute(
-                        select(TopicTaxonomyNode).where(TopicTaxonomyNode.subject == subject)
+                    (
+                        await session.execute(
+                            select(TopicTaxonomyNode).where(
+                                TopicTaxonomyNode.subject == subject
+                            )
+                        )
                     )
-                ).scalars().all()
+                    .scalars()
+                    .all()
+                )
                 existing_edges_count = (
-                    await session.execute(
-                        select(TopicPrerequisite).where(TopicPrerequisite.subject == subject)
+                    (
+                        await session.execute(
+                            select(TopicPrerequisite).where(
+                                TopicPrerequisite.subject == subject
+                            )
+                        )
                     )
-                ).scalars().all()
+                    .scalars()
+                    .all()
+                )
                 stats["topics_deleted"] = len(existing_topics_count)
                 stats["edges_deleted"] = len(existing_edges_count)
             else:
                 edges_deleted = await session.execute(
-                    delete(TopicPrerequisite).where(TopicPrerequisite.subject == subject)
+                    delete(TopicPrerequisite).where(
+                        TopicPrerequisite.subject == subject
+                    )
                 )
                 topics_deleted = await session.execute(
-                    delete(TopicTaxonomyNode).where(TopicTaxonomyNode.subject == subject)
+                    delete(TopicTaxonomyNode).where(
+                        TopicTaxonomyNode.subject == subject
+                    )
                 )
-                stats["edges_deleted"] = int(edges_deleted.rowcount or 0)
-                stats["topics_deleted"] = int(topics_deleted.rowcount or 0)
+                stats["edges_deleted"] = edges_deleted.rowcount or 0  # type: ignore[union-attr]
+                stats["topics_deleted"] = topics_deleted.rowcount or 0  # type: ignore[union-attr]
 
         existing_topics = (
-            await session.execute(
-                select(TopicTaxonomyNode).where(TopicTaxonomyNode.subject == subject)
+            (
+                await session.execute(
+                    select(TopicTaxonomyNode).where(
+                        TopicTaxonomyNode.subject == subject
+                    )
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         topic_map = {row.topic_key: row for row in existing_topics}
 
         for topic_key, display_name in topics:
@@ -175,7 +199,8 @@ async def _apply_for_subject(
                 if (
                     row.display_name != display_name
                     or row.source != "llm_v1"
-                    or (row.metadata_json or {}).get("generated_by") != "topic_graph_builder"
+                    or (row.metadata_json or {}).get("generated_by")
+                    != "topic_graph_builder"
                 ):
                     if not dry_run:
                         row.display_name = display_name
@@ -184,11 +209,19 @@ async def _apply_for_subject(
                     stats["topics_updated"] += 1
 
         existing_edges = (
-            await session.execute(
-                select(TopicPrerequisite).where(TopicPrerequisite.subject == subject)
+            (
+                await session.execute(
+                    select(TopicPrerequisite).where(
+                        TopicPrerequisite.subject == subject
+                    )
+                )
             )
-        ).scalars().all()
-        edge_map = {(row.topic_key, row.prerequisite_key): row for row in existing_edges}
+            .scalars()
+            .all()
+        )
+        edge_map = {
+            (row.topic_key, row.prerequisite_key): row for row in existing_edges
+        }
 
         for topic_key, prerequisite_key, confidence, rationale in edges:
             key = (topic_key, prerequisite_key)

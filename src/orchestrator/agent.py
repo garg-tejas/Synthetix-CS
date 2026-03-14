@@ -170,6 +170,7 @@ class RAGAgent:
             results = self.retriever.search(effective_query, top_k, **search_kwargs)
             if not results:
                 return resp
+        assert resp is not None  # loop always executes at least once
         if self.memory is not None:
             self.memory.add_turn(query, resp.answer, resp.sources_used)
         return resp
