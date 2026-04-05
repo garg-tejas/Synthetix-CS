@@ -24,6 +24,8 @@ The core architecture has three coupled layers:
 
 The backend is FastAPI + async SQLAlchemy on PostgreSQL. Frontend is React 18 + TypeScript + Vite. LLM calls go through an OpenAI-compatible client layer pointed at GLM via Z.AI.
 
+![Architecture](assets/architecture.png)
+
 ## Iterations
 
 **Retrieval**
