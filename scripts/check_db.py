@@ -1,15 +1,26 @@
 import asyncio
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load .env before reading DATABASE_URL
+_env_path = Path(__file__).resolve().parents[1] / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path, override=False)
 
 import asyncpg
 
 
 def _get_database_url() -> str:
-    """Read DATABASE_URL from env, fallback to local default."""
-    return os.getenv(
-        "DATABASE_URL",
-        "postgresql://csrag:csrag@localhost:5432/cs_rag",
-    )
+    """Read DATABASE_URL from env."""
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL environment variable is required. "
+            "Example: postgresql://user:pass@localhost:5432/cs_rag"
+        )
+    return url
 
 
 async def main():

@@ -9,6 +9,9 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
+# Load .env before any other src imports that read environment variables
+import src.config  # noqa: F401,E402
+
 logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI

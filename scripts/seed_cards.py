@@ -20,6 +20,9 @@ from typing import Dict, List
 
 from sqlalchemy import select
 
+# Load .env before any src imports that read environment variables
+import src.config  # noqa: F401,E402
+
 from src.db.models import Card, Topic
 from src.db.session import AsyncSessionLocal
 

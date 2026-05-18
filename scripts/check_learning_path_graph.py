@@ -13,6 +13,9 @@ import asyncio
 
 from sqlalchemy import func, select
 
+# Load .env before any src imports that read environment variables
+import src.config  # noqa: F401,E402
+
 from src.db.models import TopicPrerequisite, TopicTaxonomyNode
 from src.db.session import AsyncSessionLocal
 
