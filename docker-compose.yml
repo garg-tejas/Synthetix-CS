@@ -1,17 +1,17 @@
-version: "3.8"
+version: "3.9"
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: corecs-postgres
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: corecs-db
     environment:
       POSTGRES_USER: csrag
       POSTGRES_PASSWORD: csrag
       POSTGRES_DB: cs_rag
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U csrag -d cs_rag"]
       interval: 5s
@@ -19,26 +19,45 @@ services:
       retries: 5
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: corecs-backend
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://csrag:csrag@postgres:5432/cs_rag
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      DATABASE_URL: postgresql+asyncpg://csrag:csrag@db:5432/cs_rag
       LLM_BASE_URL: ${LLM_BASE_URL}
       LLM_API_KEY: ${LLM_API_KEY}
-      LLM_MODEL: ${LLM_MODEL:-glm-4.7-flash}
+      LLM_MODEL: ${LLM_MODEL}
+      HF_ROUTER_API_KEY: ${HF_ROUTER_API_KEY}
+      HF_ROUTER_MODEL: ${HF_ROUTER_MODEL}
+      HF_ROUTER_BASE_URL: ${HF_ROUTER_BASE_URL}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173}
-    depends_on:
-      postgres:
-        condition: service_healthy
     volumes:
-      # Persist HF model cache between restarts
-      - hf_cache:/root/.cache/huggingface
+      - ./data:/app/data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head && uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: corecs-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
+    volumes:
+      - ./frontend:/app:ro
+    command: >
+      sh -c "pnpm install && pnpm dev --host"
 
 volumes:
-  postgres_data:
-  hf_cache:
+  pgdata:

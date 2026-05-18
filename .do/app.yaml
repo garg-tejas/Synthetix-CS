@@ -1,0 +1,89 @@
+# DigitalOcean App Platform spec
+# Place this file in your repo root and use it with `doctl apps create --spec .do/app.yaml`
+# or paste it into the DO App Platform web UI.
+#
+# This spec deploys: PostgreSQL (managed) + Backend (FastAPI) + Frontend (static)
+# For the frontend, you can also deploy separately to Vercel and just set BACKEND_CORS_ORIGINS.
+
+name: corecs-interview-lab
+region: nyc
+
+services:
+  - name: backend
+    source_dir: /
+    dockerfile_path: Dockerfile
+    github:
+      repo: your-org/core-cs
+      branch: main
+      deploy_on_push: true
+    http_port: 8000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /api/health
+      port: 8000
+    envs:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${db.DATABASE_URL}
+      - key: LLM_BASE_URL
+        value: https://api.z.ai/api/paas/v4/
+      - key: LLM_API_KEY
+        value: your-zai-key
+      - key: LLM_MODEL
+        value: glm-4.7-flash
+      - key: HF_ROUTER_API_KEY
+        value: your-hf-token
+      - key: HF_ROUTER_MODEL
+        value: MiniMaxAI/MiniMax-M2.7:fireworks-ai
+      - key: HF_ROUTER_BASE_URL
+        value: https://router.huggingface.co/v1
+      - key: JWT_SECRET
+        generate: SECRET_KEY
+        scope: RUN_TIME
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      - key: BACKEND_CORS_ORIGINS
+        value: https://your-frontend-domain.com
+    routes:
+      - path: /api
+    # If you want the backend to also serve the frontend static build:
+    #   - path: /
+
+  - name: frontend
+    source_dir: /frontend
+    dockerfile_path: Dockerfile
+    github:
+      repo: your-org/core-cs
+      branch: main
+      deploy_on_push: true
+    http_port: 5173
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: VITE_API_URL
+        value: https://your-backend-domain.com
+      - key: VITE_CLERK_PUBLISHABLE_KEY
+        value: your-clerk-pk
+
+# Alternatively, deploy frontend to Vercel and remove the frontend service above.
+# Just set BACKEND_CORS_ORIGINS in the backend to your Vercel domain.
+
+# Database options:
+# Option A: DO Managed PostgreSQL (recommended, supports pgvector)
+databases:
+  - name: db
+    engine: PG
+    version: "16"
+    size: basic-xs
+    num_nodes: 1
+    production: false
+
+# Option B: Use external DB (Supabase / Neon)
+# Remove the `databases:` block above and set DATABASE_URL manually in backend envs.
