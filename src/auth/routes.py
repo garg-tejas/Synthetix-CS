@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import User
 from src.db.session import get_db
+from .clerk_verify import verify_clerk_session_token
 from .schemas import (
     ClerkLoginRequest,
     LoginRequest,
@@ -95,32 +96,57 @@ async def clerk_login(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenResponse:
     """
-    Exchange Clerk user credentials for our own JWT token pair.
-    Creates a local user if one does not already exist.
-    Looks up by clerk_user_id first, then by email as fallback.
+    Exchange a verified Clerk session token for our own JWT token pair.
+    The session_token is verified against Clerk's JWKS before we trust
+    any claims inside it.
     """
-    # Prefer lookup by clerk_user_id for returning Clerk users
-    user: User | None = None
-    if payload.clerk_user_id:
-        result = await db.execute(
-            select(User).where(User.clerk_user_id == payload.clerk_user_id)
+    try:
+        claims = await verify_clerk_session_token(payload.session_token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Clerk session token: {exc}",
         )
-        user = result.scalar_one_or_none()
+
+    clerk_user_id = claims.get("sub")
+    if not clerk_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Clerk token missing user identifier",
+        )
+
+    # Extract profile info from Clerk claims
+    email = claims.get("email") or claims.get("email_address")
+    username = claims.get("username") or (email.split("@")[0] if email else "user")
+    display_name = claims.get("name") or claims.get("first_name") or claims.get("last_name")
+    avatar_url = claims.get("image_url")
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Clerk token missing email claim",
+        )
+
+    # Lookup by clerk_user_id first
+    result = await db.execute(
+        select(User).where(User.clerk_user_id == clerk_user_id)
+    )
+    user = result.scalar_one_or_none()
 
     if user is None:
-        result = await db.execute(select(User).where(User.email == payload.email))
+        # Fallback: lookup by email
+        result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
 
     if user is None:
         # Auto-create user from Clerk credentials.
-        # Generate a random unusable password since auth is delegated to Clerk.
         random_password = secrets.token_urlsafe(32)
         user = User(
-            clerk_user_id=payload.clerk_user_id,
-            email=payload.email,
-            username=payload.username,
-            display_name=payload.display_name,
-            avatar_url=payload.avatar_url,
+            clerk_user_id=clerk_user_id,
+            email=email,
+            username=username,
+            display_name=display_name,
+            avatar_url=avatar_url,
             hashed_password=hash_password(random_password),
         )
         db.add(user)
@@ -129,14 +155,14 @@ async def clerk_login(
     else:
         # Sync clerk_user_id and profile fields if they changed
         needs_commit = False
-        if payload.clerk_user_id and user.clerk_user_id != payload.clerk_user_id:
-            user.clerk_user_id = payload.clerk_user_id
+        if user.clerk_user_id != clerk_user_id:
+            user.clerk_user_id = clerk_user_id
             needs_commit = True
-        if payload.display_name and user.display_name != payload.display_name:
-            user.display_name = payload.display_name
+        if display_name and user.display_name != display_name:
+            user.display_name = display_name
             needs_commit = True
-        if payload.avatar_url and user.avatar_url != payload.avatar_url:
-            user.avatar_url = payload.avatar_url
+        if avatar_url and user.avatar_url != avatar_url:
+            user.avatar_url = avatar_url
             needs_commit = True
         if needs_commit:
             await db.commit()

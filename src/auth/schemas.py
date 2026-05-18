@@ -17,11 +17,7 @@ class LoginRequest(BaseModel):
 
 
 class ClerkLoginRequest(BaseModel):
-    clerk_user_id: str
-    email: EmailStr
-    username: str
-    display_name: Optional[str] = None
-    avatar_url: Optional[str] = None
+    session_token: str
 
 
 class RefreshRequest(BaseModel):

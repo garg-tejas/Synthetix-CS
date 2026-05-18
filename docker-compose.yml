@@ -5,15 +5,15 @@ services:
     image: pgvector/pgvector:pg16
     container_name: corecs-db
     environment:
-      POSTGRES_USER: csrag
-      POSTGRES_PASSWORD: csrag
-      POSTGRES_DB: cs_rag
+      POSTGRES_USER: ${POSTGRES_USER:-csrag}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-csrag}
+      POSTGRES_DB: ${POSTGRES_DB:-cs_rag}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U csrag -d cs_rag"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,25 +24,27 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://csrag:csrag@db:5432/cs_rag
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-csrag}:${POSTGRES_PASSWORD:-csrag}@db:5432/${POSTGRES_DB:-cs_rag}
       LLM_BASE_URL: ${LLM_BASE_URL}
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_MODEL: ${LLM_MODEL}
       HF_ROUTER_API_KEY: ${HF_ROUTER_API_KEY}
       HF_ROUTER_MODEL: ${HF_ROUTER_MODEL}
       HF_ROUTER_BASE_URL: ${HF_ROUTER_BASE_URL}
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      CLERK_JWKS_URL: ${CLERK_JWKS_URL:-https://api.clerk.com/v1/jwks}
     volumes:
       - ./data:/app/data:ro
     depends_on:
       db:
         condition: service_healthy
     command: >
-      sh -c "alembic upgrade head && uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload"
+      sh -c "alembic upgrade head && uvicorn src.api.main:app --host 0.0.0.0 --port 8000"
 
   frontend:
     build:
@@ -54,10 +56,8 @@ services:
     environment:
       VITE_API_URL: http://localhost:8000
       VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
-    volumes:
-      - ./frontend:/app:ro
     command: >
-      sh -c "pnpm install && pnpm dev --host"
+      sh -c "pnpm install && pnpm build && serve -s dist -l 5173"
 
 volumes:
   pgdata:

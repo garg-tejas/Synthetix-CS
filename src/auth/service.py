@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
@@ -21,7 +22,21 @@ def _get_env_int(name: str, default: int) -> int:
         return default
 
 
-JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
+# Fail fast if JWT_SECRET is missing or too weak — prevents accidental
+# deployment with the old hardcoded default "change-me-in-production".
+_raw_jwt_secret = os.getenv("JWT_SECRET")
+if not _raw_jwt_secret:
+    raise RuntimeError(
+        "JWT_SECRET environment variable is required. "
+        "Generate one with: openssl rand -hex 32"
+    )
+JWT_SECRET = _raw_jwt_secret
+if len(JWT_SECRET.encode()) < 32:
+    raise RuntimeError(
+        "JWT_SECRET must be at least 32 bytes. "
+        "Generate one with: openssl rand -hex 32"
+    )
+
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = _get_env_int("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
 REFRESH_TOKEN_EXPIRE_DAYS = _get_env_int("REFRESH_TOKEN_EXPIRE_DAYS", 7)
@@ -41,6 +56,7 @@ def _create_token(
     subject: str,
     token_type: str,
     expires_delta: Optional[timedelta],
+    jti: Optional[str] = None,
 ) -> str:
     now = datetime.now(timezone.utc)
     expire = now + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
@@ -50,6 +66,8 @@ def _create_token(
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
     }
+    if jti:
+        to_encode["jti"] = jti
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
@@ -59,10 +77,10 @@ def create_access_token(subject: str | int, expires_minutes: Optional[int] = Non
     return _create_token(str(subject), token_type="access", expires_delta=delta)
 
 
-def create_refresh_token(subject: str | int, expires_days: Optional[int] = None) -> str:
+def create_refresh_token(subject: str | int, expires_days: Optional[int] = None, jti: Optional[str] = None) -> str:
     """Create a long-lived refresh token for a user."""
     delta = timedelta(days=expires_days or REFRESH_TOKEN_EXPIRE_DAYS)
-    return _create_token(str(subject), token_type="refresh", expires_delta=delta)
+    return _create_token(str(subject), token_type="refresh", expires_delta=delta, jti=jti)
 
 
 def decode_token(token: str) -> Dict[str, Any]:
@@ -74,9 +92,9 @@ def decode_token(token: str) -> Dict[str, Any]:
     return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
 
 
-def create_token_pair(subject: str | int) -> Dict[str, str]:
+def create_token_pair(subject: str | int, jti: Optional[str] = None) -> Dict[str, str]:
     """Convenience helper to create both access and refresh tokens."""
     access = create_access_token(subject)
-    refresh = create_refresh_token(subject)
+    refresh = create_refresh_token(subject, jti=jti)
     return {"access_token": access, "refresh_token": refresh}
 

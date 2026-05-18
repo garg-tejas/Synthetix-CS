@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
-import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/react'
+import { useAuth as useClerkAuth } from '@clerk/react'
 
 import { clerkLogin, getMe } from '../api/auth'
 import { setAuthFailureHandler, tokenManager } from '../api/client'
@@ -51,7 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('unknown')
 
   const clerkAuth = useClerkAuth()
-  const clerkUser = useClerkUser()
   const exchangeAttempted = useRef(false)
 
   const clearSession = () => {
@@ -146,25 +145,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (exchangeAttempted.current) return
         exchangeAttempted.current = true
 
-        const email = clerkUser.user?.primaryEmailAddress?.emailAddress
-        const username = clerkUser.user?.username || email?.split('@')[0] || 'user'
-        const clerkUserId = clerkUser.user?.id
-
-        if (!email || !clerkUserId) {
-          if (!cancelled) setStatus('unauthenticated')
-          return
-        }
-
         try {
-          const displayName = clerkUser.user?.fullName || clerkUser.user?.firstName || null
-          const avatarUrl = clerkUser.user?.imageUrl || null
-          const tokens = await clerkLogin({
-            clerk_user_id: clerkUserId,
-            email,
-            username,
-            display_name: displayName,
-            avatar_url: avatarUrl,
-          })
+          const sessionToken = await clerkAuth.getToken()
+          if (!sessionToken) {
+            if (!cancelled) setStatus('unauthenticated')
+            return
+          }
+          const tokens = await clerkLogin({ session_token: sessionToken })
           if (cancelled) return
           setTokenPair(tokens)
           // /me will be fetched by the accessToken effect above.

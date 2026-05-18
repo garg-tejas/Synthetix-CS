@@ -10,13 +10,16 @@ def _get_database_url() -> str:
     """
     Return the async PostgreSQL database URL.
 
-    Falls back to a sensible local default if not set, so tests and
-    local development can run with minimal configuration.
+    Requires DATABASE_URL to be set explicitly. No hardcoded fallback
+    to prevent accidental credential exposure in production.
     """
-    return os.getenv(
-        "DATABASE_URL",
-        "postgresql+asyncpg://csrag:csrag@localhost:5432/cs_rag",
-    )
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL environment variable is required. "
+            "Example: postgresql+asyncpg://user:pass@localhost:5432/cs_rag"
+        )
+    return url
 
 
 DATABASE_URL = _get_database_url()
