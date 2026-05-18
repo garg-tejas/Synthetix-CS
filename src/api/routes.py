@@ -59,6 +59,18 @@ async def health(request: Request) -> HealthResponse:
     return HealthResponse(status="ok", chunks_loaded=chunks_loaded)
 
 
+@router.get("/readyz")
+async def readyz(request: Request) -> dict:
+    """Readiness probe — checks chunks loaded and basic app state."""
+    agent, retriever, _, chunks_loaded = _get_state(request)
+    if agent is None or retriever is None or chunks_loaded == 0:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "chunks_loaded": chunks_loaded},
+        )
+    return {"status": "ready", "chunks_loaded": chunks_loaded}
+
+
 @router.get("/stats", response_model=StatsResponse)
 async def stats(
     request: Request,

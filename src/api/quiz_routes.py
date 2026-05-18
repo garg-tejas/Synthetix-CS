@@ -183,9 +183,9 @@ async def start_quiz_session(
     current_user: Annotated[User, Depends(get_current_active_user)],
     request: Request,
 ) -> QuizSessionStartResponse:
-    session_service = QuizSessionService(
-        chunks_by_id=getattr(request.app.state, "chunks_by_id", {}) or {}
-    )
+    session_service = getattr(request.app.state, "session_service", None)
+    if session_service is None:
+        raise HTTPException(status_code=503, detail="Quiz service not initialized")
     state = await session_service.start_session(
         db=db,
         user_id=current_user.id,
@@ -224,9 +224,9 @@ async def answer_quiz_session(
             status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
         )
 
-    session_service = QuizSessionService(
-        chunks_by_id=getattr(request.app.state, "chunks_by_id", {}) or {}
-    )
+    session_service = getattr(request.app.state, "session_service", None)
+    if session_service is None:
+        raise HTTPException(status_code=503, detail="Quiz service not initialized")
     try:
         outcome = await session_service.submit_current_answer(
             db=db,
@@ -274,9 +274,9 @@ async def skip_quiz_session_card(
             status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
         )
 
-    session_service = QuizSessionService(
-        chunks_by_id=getattr(request.app.state, "chunks_by_id", {}) or {}
-    )
+    session_service = getattr(request.app.state, "session_service", None)
+    if session_service is None:
+        raise HTTPException(status_code=503, detail="Quiz service not initialized")
     try:
         next_card = await session_service.skip_current_card(
             db=db,

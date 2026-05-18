@@ -26,6 +26,7 @@ from .routes import router
 from .quiz_routes import router as quiz_router
 from .tutor_routes import router as tutor_router
 from src.auth.routes import router as auth_router
+from src.skills.session_service import QuizSessionService
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -81,6 +82,10 @@ async def lifespan(app: FastAPI):
     app.state.tutor_agent = build_tutor_agent(retriever) if retriever else None
     # Bounded thread pool for LLM generation to prevent unbounded thread growth
     app.state.llm_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="llm-")
+    # Long-lived QuizSessionService (avoids per-request instantiation + GC issues)
+    app.state.session_service = QuizSessionService(
+        chunks_by_id=getattr(app.state, "chunks_by_id", {}) or {}
+    )
     yield
     app.state.sessions.clear()
     app.state.quiz_sessions.clear()

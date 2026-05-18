@@ -15,12 +15,13 @@ RUN pip install --no-cache-dir uv
 
 # Copy dependency files and install with lock file for reproducibility
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --extra cpu
+RUN uv sync --frozen --extra cpu --no-dev
 
 # Copy application code
 COPY src/ ./src/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
+COPY entrypoint.sh ./
 COPY data/ ./data/
 COPY scripts/ ./scripts/
 
@@ -30,5 +31,6 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Expose FastAPI port
 EXPOSE 8000
 
-# Run migrations then start server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn src.api.main:app --host 0.0.0.0 --port 8000"]
+# Run migrations then start server via entrypoint script
+RUN chmod +x entrypoint.sh
+CMD ["./entrypoint.sh"]
