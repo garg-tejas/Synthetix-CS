@@ -7,23 +7,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from ..llm.client import ModelScopeClient, create_client
+from ..llm.client import LLMClient, create_client
 
 
 @dataclass
 class HydeGenerator:
-    """Thin wrapper over ModelScopeClient for HYDE-style retrieval."""
+    """Thin wrapper over LLMClient for HYDE-style retrieval."""
 
-    client: ModelScopeClient
+    client: LLMClient
 
     @classmethod
     def from_env(
         cls,
         model_name: Optional[str] = None,
-        modelscope_token: Optional[str] = None,
     ) -> "HydeGenerator":
         """Construct a HYDE generator using environment-based configuration."""
-        client = create_client(model_name=model_name, modelscope_token=modelscope_token)
+        client = create_client(model_name=model_name)
         return cls(client=client)
 
     def generate_hypothetical_answer(

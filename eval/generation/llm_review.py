@@ -12,7 +12,7 @@ import json
 import re
 from typing import Any, Dict, List
 
-from src.llm.client import ModelScopeClient
+from src.llm.client import LLMClient
 from src.rag.index import ChunkRecord
 from .prompts import build_bulk_qa_scoring_prompt, build_qa_review_prompt
 
@@ -105,7 +105,7 @@ def review_questions_with_llm(
     *,
     questions: List[Dict[str, Any]],
     chunk: ChunkRecord,
-    llm_client: ModelScopeClient,
+    llm_client: LLMClient,
     min_score: int = 70,
     allow_rewrite: bool = True,
     max_retries: int = 2,
@@ -234,7 +234,7 @@ def review_questions_with_llm(
 def score_questions_batch_with_llm(
     *,
     questions: List[Dict[str, Any]],
-    llm_client: ModelScopeClient,
+    llm_client: LLMClient,
     min_score: int = 70,
     allow_rewrite: bool = False,
     max_retries: int = 2,

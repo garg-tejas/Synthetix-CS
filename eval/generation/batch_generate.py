@@ -1,5 +1,5 @@
 """
-Batch processing CLI for generating QA pairs from chunks using an OpenAI-compatible API (Z.AI/GLM, ModelScope, etc.).
+Batch processing CLI for generating QA pairs from chunks using an OpenAI-compatible API (Z.AI/GLM).
 """
 
 from __future__ import annotations
@@ -118,19 +118,19 @@ def save_checkpoint(checkpoint_path: Path, all_questions: List[dict]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate QA pairs from textbook chunks (Z.AI/GLM, ModelScope, or other OpenAI-compatible API)."
+        description="Generate QA pairs from textbook chunks (Z.AI/GLM or other OpenAI-compatible API)."
     )
     parser.add_argument(
         "--model",
         type=str,
         default=None,
-        help="Model name (default: LLM_MODEL or MODELSCOPE_MODEL env var, e.g. glm-4.7-flash)",
+        help="Model name (default: LLM_MODEL env var, e.g. glm-4.7-flash)",
     )
     parser.add_argument(
-        "--modelscope-token",
+        "--api-key",
         type=str,
         default=None,
-        help="API key (or set LLM_API_KEY / MODELSCOPE_API_TOKEN env var)",
+        help="API key (or set LLM_API_KEY env var)",
     )
     parser.add_argument(
         "--subject",
@@ -252,7 +252,7 @@ def main() -> None:
     try:
         llm_client = create_client(
             model_name=args.model,
-            modelscope_token=args.modelscope_token,
+            api_key=args.api_key,
         )
         calls_per_chunk = 1 + (
             1 if args.quality_mode in {"llm_hybrid", "llm_only"} else 0
@@ -267,7 +267,7 @@ def main() -> None:
         print(f"Error initializing client: {e}")
         print("\nMake sure openai is installed: uv pip install openai")
         print("\nSet API key (Z.AI/GLM): LLM_BASE_URL, LLM_API_KEY, LLM_MODEL in .env")
-        print("  Or ModelScope: MODELSCOPE_API_TOKEN (and optionally MODELSCOPE_MODEL)")
+        print("  Set LLM_API_KEY and LLM_BASE_URL for Z.AI/GLM.")
         return
 
     print("\nGenerating questions...")

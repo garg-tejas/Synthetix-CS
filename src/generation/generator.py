@@ -8,28 +8,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterator, List, Optional
 
-from src.llm.client import ModelScopeClient
-from src.rag.retriever import RetrievalResult
-
-from .citations import Citation, extract_citations
-from .config import GenerationConfig
-from .context_builder import build_context
-from .prompts import ANSWER_PROMPT
-
-
-@dataclass
-class GeneratedAnswer:
-    """Result of RAG answer generation."""
-
-    answer: str
-    citations: List[Citation]
-    confidence: float = 0.0
+from src.llm.client import LLMClient
 
 
 class AnswerGenerator:
-    """Generate answers from a query and retrieved chunks using the LLM."""
+    """Generates answers using an LLM client."""
 
-    def __init__(self, client: ModelScopeClient):
+    def __init__(self, client: LLMClient):
         self.client = client
 
     def generate(

@@ -8,7 +8,7 @@ import json
 import re
 from typing import Dict, List, Literal, Optional
 
-from src.llm.client import ModelScopeClient
+from src.llm.client import LLMClient
 from src.rag.index import ChunkRecord
 from .interview_quality import assess_interview_quality
 from .llm_review import review_questions_with_llm
@@ -63,7 +63,7 @@ def parse_llm_response(response: str) -> List[Dict]:
 
 def generate_questions_from_chunk(
     chunk: ChunkRecord,
-    llm_client: ModelScopeClient,
+    llm_client: LLMClient,
     num_questions: int = 2,
     max_retries: int = 2,
     min_score: int = 70,
@@ -78,7 +78,7 @@ def generate_questions_from_chunk(
     
     Args:
         chunk: The chunk to generate questions from
-        llm_client: Initialized ModelScopeClient
+        llm_client: Initialized LLMClient
         num_questions: Number of questions to generate
         max_retries: Number of retries if parsing fails
         min_score: Minimum quality score (0-100)
@@ -239,7 +239,7 @@ def _infer_subject(chunk: ChunkRecord) -> str:
 
 def generate_questions_batch(
     chunks: List[ChunkRecord],
-    llm_client: ModelScopeClient,
+    llm_client: LLMClient,
     questions_per_chunk: int = 2,
     min_score: int = 70,
     quality_mode: QualityMode = "llm_hybrid",
@@ -250,7 +250,7 @@ def generate_questions_batch(
     
     Args:
         chunks: List of chunks to process
-        llm_client: Initialized ModelScopeClient
+        llm_client: Initialized LLMClient
         questions_per_chunk: Number of questions per chunk
         min_score: Minimum quality score (0-100) to keep questions.
         quality_mode: Quality filtering strategy.

@@ -1,5 +1,5 @@
 """
-LLM client for OpenAI-compatible APIs (ModelScope, Z.AI/GLM, DeepSeek, etc.).
+LLM client for OpenAI-compatible APIs (Z.AI/GLM and HF Router).
 """
 
 from __future__ import annotations
@@ -22,40 +22,21 @@ if load_dotenv is not None:
         load_dotenv(env_file)
 
 
-# Z.AI / GLM (optional): set LLM_BASE_URL + LLM_API_KEY to use GLM-4.7-flash etc.
+# Z.AI / GLM: set LLM_BASE_URL + LLM_API_KEY to use glm-4.7-flash etc.
 LLM_BASE_URL = os.getenv("LLM_BASE_URL")
 LLM_API_KEY = os.getenv("LLM_API_KEY")
 LLM_MODEL = os.getenv("LLM_MODEL", "glm-4.7-flash")
 
-# ModelScope fallback
-DEFAULT_MODELSCOPE_MODEL = os.getenv("MODELSCOPE_MODEL", "deepseek-ai/DeepSeek-R1-0528")
-DEFAULT_MODELSCOPE_BASE_URL = "https://api-inference.modelscope.ai/v1"
+# HF Router (for tutor chat)
+HF_ROUTER_BASE_URL = os.getenv("HF_ROUTER_BASE_URL", "https://router.huggingface.co/v1")
+HF_ROUTER_API_KEY = os.getenv("HF_ROUTER_API_KEY") or os.getenv("HF_TOKEN")
+HF_ROUTER_MODEL = os.getenv("HF_ROUTER_MODEL", "MiniMaxAI/MiniMax-M2.7:fireworks-ai")
 
 logger = logging.getLogger(__name__)
 
 
-def _resolve_client_params(
-    model_name: Optional[str] = None,
-    api_token: Optional[str] = None,
-    base_url: Optional[str] = None,
-) -> tuple[str, str, str]:
-    """Resolve model, api_key, base_url from args or env (Z.AI when set, else ModelScope)."""
-    use_zai = (LLM_BASE_URL and LLM_API_KEY) or (base_url and api_token)
-    if use_zai:
-        base = base_url or LLM_BASE_URL or ""
-        key = api_token or LLM_API_KEY or ""
-        model = model_name or LLM_MODEL
-        if base and key:
-            return model, key, base
-    # ModelScope
-    key = api_token or os.getenv("MODELSCOPE_API_TOKEN")
-    base = base_url or os.getenv("MODELSCOPE_API_URL", DEFAULT_MODELSCOPE_BASE_URL)
-    model = model_name or DEFAULT_MODELSCOPE_MODEL
-    return model, key or "", base
-
-
-class ModelScopeClient:
-    """OpenAI-compatible chat client (ModelScope, Z.AI/GLM, DeepSeek, etc.)."""
+class LLMClient:
+    """OpenAI-compatible chat client (Z.AI/GLM, HF Router, etc.)."""
 
     def __init__(
         self,
@@ -68,12 +49,14 @@ class ModelScopeClient:
                 "openai not installed. Install with: uv pip install openai"
             )
 
-        self.model_name, api_key, self.base_url = _resolve_client_params(
-            model_name=model_name, api_token=api_token, base_url=base_url
-        )
-        if not api_key:
+        self.model_name = model_name or LLM_MODEL
+        self.base_url = base_url or (LLM_BASE_URL or "")
+        api_key = api_token or (LLM_API_KEY or "")
+
+        if not self.base_url or not api_key:
             raise ValueError(
-                "API key required. Set LLM_API_KEY (for Z.AI) or MODELSCOPE_API_TOKEN (for ModelScope)."
+                "API base_url and key required. Set LLM_BASE_URL + LLM_API_KEY (for Z.AI) "
+                "or pass them explicitly."
             )
         self.client = OpenAI(base_url=self.base_url, api_key=api_key)
 
@@ -109,7 +92,7 @@ class ModelScopeClient:
             retry_count = 0
             while retry_count < max_retries:
                 try:
-                    # Z.AI supports only one stop word; pass at most one to avoid empty/invalid response
+                    # Z.AI supports only one stop word; pass at most one
                     stop_param = stop[:1] if stop else None
                     create_kw: dict = {
                         "model": self.model_name,
@@ -163,10 +146,8 @@ class ModelScopeClient:
                                 max_retries,
                             )
                             results.append("")
-                            # Longer delay before continuing to next prompt
                             time.sleep(10 + random.uniform(0, 5))
                             break
-                        # Exponential backoff with jitter for concurrency limits
                         backoff = (2**retry_count) * 3 + random.uniform(0, 3)
                         logger.warning(
                             "Rate limit hit (429/concurrency). Retrying in %s s (attempt %s/%s)",
@@ -218,13 +199,32 @@ class ModelScopeClient:
 
 def create_client(
     model_name: Optional[str] = None,
-    modelscope_token: Optional[str] = None,
     base_url: Optional[str] = None,
     api_key: Optional[str] = None,
-) -> ModelScopeClient:
-    """Create an OpenAI-compatible client (Z.AI/GLM, ModelScope, etc.)."""
-    return ModelScopeClient(
+) -> LLMClient:
+    """Create a Z.AI/GLM client from env vars or explicit args."""
+    return LLMClient(
         model_name=model_name,
-        api_token=modelscope_token or api_key,
+        api_token=api_key,
         base_url=base_url,
+    )
+
+
+def create_tutor_client(
+    model_name: Optional[str] = None,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> LLMClient:
+    """Create an HF Router client for the tutor chat."""
+    key = api_key or HF_ROUTER_API_KEY
+    url = base_url or HF_ROUTER_BASE_URL
+    model = model_name or HF_ROUTER_MODEL
+    if not key:
+        raise ValueError(
+            "HF Router API key required. Set HF_ROUTER_API_KEY or HF_TOKEN env var."
+        )
+    return LLMClient(
+        model_name=model,
+        api_token=key,
+        base_url=url,
     )

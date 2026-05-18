@@ -335,6 +335,9 @@ class QuizSessionService:
         )
         if review_state is None:
             db.add(updated_state)
+        else:
+            # Object was loaded in a previous session; merge it into the current one.
+            updated_state = await db.merge(updated_state)
         db.add(attempt)
         await db.commit()
         await db.refresh(updated_state)

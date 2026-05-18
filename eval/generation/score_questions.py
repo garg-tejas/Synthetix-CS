@@ -198,10 +198,10 @@ def main() -> None:
         help="LLM model name (default: glm-4.7-flash)",
     )
     parser.add_argument(
-        "--modelscope-token",
+        "--api-key",
         type=str,
         default=None,
-        help="API key override (otherwise uses env vars)",
+        help="API key override (otherwise uses LLM_API_KEY env var)",
     )
     parser.add_argument(
         "--batch-size",
@@ -295,7 +295,7 @@ def main() -> None:
     try:
         llm_client = create_client(
             model_name=args.model,
-            modelscope_token=args.modelscope_token,
+            api_key=args.api_key,
         )
     except Exception as e:
         print(f"Error initializing LLM client: {e}")
