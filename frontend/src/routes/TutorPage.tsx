@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   createConversation,
   deleteConversation,
@@ -13,10 +12,8 @@ import type {
   ConversationOut,
   CreateConversationRequest,
 } from '../api/types'
-import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
-import { PageHeader } from '../components/ui/PageHeader'
-import { StateMessage } from '../components/ui/StateMessage'
+import Button from '../components/ui/Button'
+import StateMessage from '../components/ui/StateMessage'
 import './tutor.css'
 
 interface StreamingMessage {
@@ -34,7 +31,6 @@ const SUBJECT_OPTIONS = [
 ]
 
 export default function TutorPage() {
-  const navigate = useNavigate()
   const [conversations, setConversations] = useState<ConversationOut[]>([])
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null)
   const [messages, setMessages] = useState<ChatMessageOut[]>([])
@@ -253,13 +249,11 @@ export default function TutorPage() {
       </aside>
 
       <main className="tutor-main">
-        <PageHeader
-          eyebrow="AI Tutor"
-          title="Study Assistant"
-          subtitle="Ask anything about OS, DBMS, or Computer Networks. Grounded in your textbook."
-          backHref="/dashboard"
-          backLabel="Back to dashboard"
-        />
+        <div className="tutor-header">
+          <span className="tutor-header__eyebrow">AI Tutor</span>
+          <h1 className="tutor-header__title">Study Assistant</h1>
+          <p className="tutor-header__subtitle">Ask anything about OS, DBMS, or Computer Networks. Grounded in your textbook.</p>
+        </div>
 
         <div className="tutor-scope">
           <label>Scope:</label>

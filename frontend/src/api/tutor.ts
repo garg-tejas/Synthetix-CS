@@ -2,8 +2,10 @@
  * Tutor API endpoints.
  */
 
-import { apiRequest } from './client'
+import { apiRequest, tokenManager } from './client'
 import type {
+  CitationOut,
+  ChunkSummary,
   ConversationDetailOut,
   ConversationListResponse,
   CreateConversationRequest,
@@ -48,10 +50,10 @@ export async function tutorChat(data: TutorChatRequest): Promise<TutorChatRespon
 export async function tutorChatStream(
   data: TutorChatRequest,
   onToken: (token: string) => void,
-  onDone: (citations: unknown[], chunksUsed: unknown[], conversationId: number) => void,
+  onDone: (citations: CitationOut[], chunksUsed: ChunkSummary[], conversationId: number) => void,
   onError: (error: string) => void
 ): Promise<void> {
-  const accessToken = localStorage.getItem('access_token')
+  const accessToken = tokenManager.getAccessToken()
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
@@ -59,7 +61,7 @@ export async function tutorChatStream(
     headers['Authorization'] = `Bearer ${accessToken}`
   }
 
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/tutor/chat/stream`, {
+  const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/tutor/chat/stream`, {
     method: 'POST',
     headers,
     body: JSON.stringify(data),

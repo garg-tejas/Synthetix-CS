@@ -91,6 +91,34 @@
   opacity: 1;
 }
 
+.tutor-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.tutor-header__eyebrow {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.tutor-header__title {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.2vw, 1.8rem);
+  line-height: 1.15;
+}
+
+.tutor-header__subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+  line-height: 1.45;
+  max-width: 62ch;
+}
+
 .tutor-main {
   flex: 1;
   display: flex;
