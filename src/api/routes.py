@@ -8,11 +8,13 @@ import asyncio
 import json
 import queue
 import threading
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from src.auth.dependencies import get_current_active_user
+from src.db.models import User
 from src.generation import extract_citations
 from src.orchestrator import ConversationMemory
 
@@ -53,14 +55,17 @@ def _get_sessions(request: Request) -> dict[str, ConversationMemory]:
 
 @router.get("/health", response_model=HealthResponse)
 async def health(request: Request) -> HealthResponse:
-    """Health check."""
+    """Health check — public, no auth required."""
     _, _, _, chunks_loaded = _get_state(request)
     return HealthResponse(status="ok", chunks_loaded=chunks_loaded)
 
 
 @router.get("/stats", response_model=StatsResponse)
-async def stats(request: Request) -> StatsResponse:
-    """Usage statistics."""
+async def stats(
+    request: Request,
+    _current_user: Annotated[User, Depends(get_current_active_user)],
+) -> StatsResponse:
+    """Usage statistics — requires auth."""
     sessions = _get_sessions(request)
     return StatsResponse(active_conversations=len(sessions))
 
@@ -124,8 +129,12 @@ async def _stream_chat(
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: Request, body: ChatRequest) -> ChatResponse | JSONResponse:
-    """Answer a question using the RAG agent (with optional conversation history)."""
+async def chat(
+    request: Request,
+    body: ChatRequest,
+    _current_user: Annotated[User, Depends(get_current_active_user)],
+) -> ChatResponse | JSONResponse:
+    """Answer a question using the RAG agent (with optional conversation history). Requires auth."""
     agent, _, chunks_by_id, chunks_loaded = _get_state(request)
     if agent is None or chunks_loaded == 0:
         return JSONResponse(
@@ -167,8 +176,12 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse | JSONRespon
 
 
 @router.post("/chat/stream", response_model=None)
-async def chat_stream(request: Request, body: ChatRequest) -> StreamingResponse | JSONResponse:
-    """Stream answer tokens via SSE; final event has citations and chunks_used."""
+async def chat_stream(
+    request: Request,
+    body: ChatRequest,
+    _current_user: Annotated[User, Depends(get_current_active_user)],
+) -> StreamingResponse | JSONResponse:
+    """Stream answer tokens via SSE; final event has citations and chunks_used. Requires auth."""
     agent, _, chunks_by_id, chunks_loaded = _get_state(request)
     if agent is None or chunks_loaded == 0:
         return JSONResponse(
@@ -184,8 +197,12 @@ async def chat_stream(request: Request, body: ChatRequest) -> StreamingResponse 
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search_endpoint(request: Request, body: SearchRequest) -> SearchResponse | JSONResponse:
-    """Direct search (no generation)."""
+async def search_endpoint(
+    request: Request,
+    body: SearchRequest,
+    _current_user: Annotated[User, Depends(get_current_active_user)],
+) -> SearchResponse | JSONResponse:
+    """Direct search (no generation). Requires auth."""
     _, retriever, chunks_by_id, chunks_loaded = _get_state(request)
     if retriever is None or chunks_loaded == 0:
         return JSONResponse(
@@ -208,8 +225,12 @@ async def search_endpoint(request: Request, body: SearchRequest) -> SearchRespon
 
 
 @router.delete("/conversation")
-async def clear_conversation(request: Request, conversation_id: str = "default") -> dict:
-    """Clear conversation history for the given conversation_id."""
+async def clear_conversation(
+    request: Request,
+    _current_user: Annotated[User, Depends(get_current_active_user)],
+    conversation_id: str = "default",
+) -> dict:
+    """Clear conversation history for the given conversation_id. Requires auth."""
     sessions = _get_sessions(request)
     if conversation_id in sessions:
         sessions[conversation_id].clear()

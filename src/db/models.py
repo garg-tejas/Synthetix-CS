@@ -25,11 +25,20 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    clerk_user_id: Mapped[Optional[str]] = mapped_column(
+        String(255), unique=True, nullable=True, index=True
+    )
     email: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False, index=True
     )
     username: Mapped[str] = mapped_column(
         String(64), unique=True, nullable=False, index=True
+    )
+    display_name: Mapped[Optional[str]] = mapped_column(
+        String(128), nullable=True
+    )
+    avatar_url: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True
     )
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[dt.datetime] = mapped_column(
@@ -316,6 +325,28 @@ class UserTopicSWOT(Base):
         DateTime(timezone=True),
         default=dt.datetime.utcnow,
         onupdate=dt.datetime.utcnow,
+        nullable=False,
+    )
+
+
+class DocumentChunk(Base):
+    """A persisted textbook chunk with optional pgvector embedding."""
+
+    __tablename__ = "document_chunks"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    book_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    header_path: Mapped[str] = mapped_column(Text, nullable=False)
+    chunk_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    key_terms: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    potential_questions: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    subject: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, index=True)
+    # embedding vector is managed separately (pgvector) via raw SQL or pgvector lib
+    embedding_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=dt.datetime.utcnow,
         nullable=False,
     )
 

@@ -20,6 +20,7 @@ dependencies = [
     "python-jose[cryptography]>=3.5.0",
     "pydantic[email]>=2.12.5",
     "bcrypt>=3.2.2",
+    "pgvector>=0.3.0",
 ]
 
 [project.optional-dependencies]
