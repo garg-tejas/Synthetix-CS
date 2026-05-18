@@ -156,10 +156,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         try {
+          const displayName = clerkUser.user?.fullName || clerkUser.user?.firstName || null
+          const avatarUrl = clerkUser.user?.imageUrl || null
           const tokens = await clerkLogin({
             clerk_user_id: clerkUserId,
             email,
             username,
+            display_name: displayName,
+            avatar_url: avatarUrl,
           })
           if (cancelled) return
           setTokenPair(tokens)

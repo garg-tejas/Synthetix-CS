@@ -96,23 +96,51 @@ async def clerk_login(
 ) -> TokenResponse:
     """
     Exchange Clerk user credentials for our own JWT token pair.
-    Creates a local user if one does not already exist for the given email.
+    Creates a local user if one does not already exist.
+    Looks up by clerk_user_id first, then by email as fallback.
     """
-    result = await db.execute(select(User).where(User.email == payload.email))
-    user = result.scalar_one_or_none()
+    # Prefer lookup by clerk_user_id for returning Clerk users
+    user: User | None = None
+    if payload.clerk_user_id:
+        result = await db.execute(
+            select(User).where(User.clerk_user_id == payload.clerk_user_id)
+        )
+        user = result.scalar_one_or_none()
+
+    if user is None:
+        result = await db.execute(select(User).where(User.email == payload.email))
+        user = result.scalar_one_or_none()
 
     if user is None:
         # Auto-create user from Clerk credentials.
         # Generate a random unusable password since auth is delegated to Clerk.
         random_password = secrets.token_urlsafe(32)
         user = User(
+            clerk_user_id=payload.clerk_user_id,
             email=payload.email,
             username=payload.username,
+            display_name=payload.display_name,
+            avatar_url=payload.avatar_url,
             hashed_password=hash_password(random_password),
         )
         db.add(user)
         await db.commit()
         await db.refresh(user)
+    else:
+        # Sync clerk_user_id and profile fields if they changed
+        needs_commit = False
+        if payload.clerk_user_id and user.clerk_user_id != payload.clerk_user_id:
+            user.clerk_user_id = payload.clerk_user_id
+            needs_commit = True
+        if payload.display_name and user.display_name != payload.display_name:
+            user.display_name = payload.display_name
+            needs_commit = True
+        if payload.avatar_url and user.avatar_url != payload.avatar_url:
+            user.avatar_url = payload.avatar_url
+            needs_commit = True
+        if needs_commit:
+            await db.commit()
+            await db.refresh(user)
 
     tokens = create_token_pair(user.id)
     return TokenResponse(**tokens)
