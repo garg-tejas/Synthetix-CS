@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import json
 import queue
+import time
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Request
@@ -46,11 +47,41 @@ def _get_state(request: Request) -> tuple[Any, Any, dict, int]:
 
 
 def _get_sessions(request: Request) -> dict[tuple[int, str], ConversationMemory]:
+    now = time.time()
+    ttl_minutes = int(getattr(request.app.state, "conversation_session_ttl_minutes", 120))
+    max_sessions = int(getattr(request.app.state, "conversation_session_max", 2000))
+    ttl_seconds = ttl_minutes * 60
+
     sessions = getattr(request.app.state, "sessions", None)
+    last_seen = getattr(request.app.state, "session_last_seen", None)
     if sessions is None:
         request.app.state.sessions = {}
         sessions = request.app.state.sessions
+    if last_seen is None:
+        request.app.state.session_last_seen = {}
+        last_seen = request.app.state.session_last_seen
+
+    stale_keys = [k for k, ts in last_seen.items() if now - ts > ttl_seconds]
+    for key in stale_keys:
+        sessions.pop(key, None)
+        last_seen.pop(key, None)
+
+    if len(sessions) > max_sessions:
+        overflow = len(sessions) - max_sessions
+        oldest_keys = sorted(last_seen, key=lambda k: last_seen[k])[:overflow]
+        for key in oldest_keys:
+            sessions.pop(key, None)
+            last_seen.pop(key, None)
+
     return sessions
+
+
+def _touch_session(request: Request, key: tuple[int, str]) -> None:
+    last_seen = getattr(request.app.state, "session_last_seen", None)
+    if last_seen is None:
+        request.app.state.session_last_seen = {}
+        last_seen = request.app.state.session_last_seen
+    last_seen[key] = time.time()
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -96,6 +127,7 @@ async def _stream_chat(
     if memory is None:
         memory = ConversationMemory(max_turns=10)
         sessions[key] = memory
+    _touch_session(request, key)
     history = memory.get_history()
     results, fallback = await asyncio.to_thread(agent.retrieve, body.query, history)
     if fallback is not None:
@@ -169,6 +201,7 @@ async def chat(
     if memory is None:
         memory = ConversationMemory(max_turns=10)
         sessions[key] = memory
+    _touch_session(request, key)
     history = memory.get_history()
     resp = await asyncio.to_thread(agent.answer, body.query, history)
     memory.add_turn(body.query, resp.answer, resp.sources_used)
@@ -260,4 +293,7 @@ async def clear_conversation(
     key = (current_user.id, conversation_id)
     if key in sessions:
         sessions[key].clear()
+    last_seen = getattr(request.app.state, "session_last_seen", None)
+    if last_seen is not None:
+        last_seen.pop(key, None)
     return {"ok": True, "conversation_id": conversation_id}

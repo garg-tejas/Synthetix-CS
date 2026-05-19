@@ -13,6 +13,8 @@ from jwt.algorithms import RSAAlgorithm
 
 CLERK_SECRET_KEY = os.environ.get("CLERK_SECRET_KEY")
 CLERK_JWKS_URL = os.environ.get("CLERK_JWKS_URL", "https://api.clerk.com/v1/jwks")
+CLERK_ISSUER = os.environ.get("CLERK_ISSUER")
+CLERK_AUDIENCE = os.environ.get("CLERK_AUDIENCE")
 
 
 async def verify_clerk_session_token(token: str) -> Dict[str, Any]:
@@ -56,10 +58,20 @@ async def verify_clerk_session_token(token: str) -> Dict[str, Any]:
     # Convert JWK dict to an RSA public key for PyJWT
     public_key = RSAAlgorithm.from_jwk(json.dumps(signing_key))
 
-    payload = jwt.decode(
-        token,
-        public_key,
-        algorithms=["RS256"],
-        options={"verify_aud": False},
-    )
+    decode_kwargs: dict[str, Any] = {
+        "algorithms": ["RS256"],
+    }
+    options = {}
+
+    if CLERK_ISSUER:
+        decode_kwargs["issuer"] = CLERK_ISSUER
+    if CLERK_AUDIENCE:
+        decode_kwargs["audience"] = CLERK_AUDIENCE
+    else:
+        options["verify_aud"] = False
+
+    if options:
+        decode_kwargs["options"] = options
+
+    payload = jwt.decode(token, public_key, **decode_kwargs)
     return payload

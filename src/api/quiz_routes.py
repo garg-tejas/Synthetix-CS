@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 from typing import Annotated, List, Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -67,10 +68,33 @@ async def _refresh_swot_snapshot(
 
 
 def _quiz_sessions_store(request: Request) -> dict[str, QuizSessionState]:
+    ttl_minutes = int(getattr(request.app.state, "quiz_session_ttl_minutes", 180))
+    max_sessions = int(getattr(request.app.state, "quiz_session_max", 2000))
+    now = dt.datetime.now(dt.timezone.utc)
+
     store = getattr(request.app.state, "quiz_sessions", None)
     if store is None:
         store = {}
         request.app.state.quiz_sessions = store
+
+    cutoff = now - dt.timedelta(minutes=ttl_minutes)
+    stale_ids = [
+        session_id
+        for session_id, state in store.items()
+        if state.created_at < cutoff
+    ]
+    for session_id in stale_ids:
+        store.pop(session_id, None)
+
+    if len(store) > max_sessions:
+        overflow = len(store) - max_sessions
+        oldest_ids = sorted(
+            store,
+            key=lambda session_id: store[session_id].created_at,
+        )[:overflow]
+        for session_id in oldest_ids:
+            store.pop(session_id, None)
+
     return store
 
 

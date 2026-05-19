@@ -57,6 +57,17 @@ def _get_cors_origins() -> list[str]:
     return origins
 
 
+def _get_env_int(name: str, default: int, *, minimum: int = 1) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return max(minimum, value)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load chunks and build agents on startup; clear on shutdown."""
@@ -75,6 +86,7 @@ async def lifespan(app: FastAPI):
     app.state.chunks_by_id = chunks_by_id or {}
     app.state.chunks_loaded = chunks_loaded
     app.state.sessions = {}
+    app.state.session_last_seen = {}
     app.state.quiz_sessions = {}
     app.state.tutor_agent = build_tutor_agent(retriever) if retriever else None
     # Bounded thread pool for LLM generation to prevent unbounded thread growth
@@ -97,6 +109,14 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+app.state.conversation_session_ttl_minutes = _get_env_int(
+    "CONVERSATION_SESSION_TTL_MINUTES", 120
+)
+app.state.conversation_session_max = _get_env_int(
+    "CONVERSATION_SESSION_MAX", 2000
+)
+app.state.quiz_session_ttl_minutes = _get_env_int("QUIZ_SESSION_TTL_MINUTES", 180)
+app.state.quiz_session_max = _get_env_int("QUIZ_SESSION_MAX", 2000)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SecurityHeadersMiddleware)
