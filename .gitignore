@@ -13,7 +13,7 @@ wheels/
 
 # Environment variables
 *.env
-!env.example
+!.env.example
 
 # pdfs, mmds of the 9 source books
 books/
