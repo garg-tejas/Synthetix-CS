@@ -8,7 +8,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterator, List, Optional
 
+from .citations import Citation, extract_citations
+from .config import GenerationConfig
+from .context_builder import build_context
+from .prompts import ANSWER_PROMPT
 from src.llm.client import LLMClient
+from src.rag.retriever import RetrievalResult
+
+
+@dataclass
+class GeneratedAnswer:
+    answer: str
+    citations: List[Citation]
+    confidence: float = 0.0
 
 
 class AnswerGenerator:

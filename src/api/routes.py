@@ -12,6 +12,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from src.api.rate_limit import limiter
 from src.auth.dependencies import get_current_active_user
 from src.db.models import User
 from src.generation import extract_citations
@@ -148,6 +149,7 @@ async def _stream_chat(
 
 
 @router.post("/chat", response_model=ChatResponse)
+@limiter.limit("30/minute")
 async def chat(
     request: Request,
     body: ChatRequest,
@@ -196,6 +198,7 @@ async def chat(
 
 
 @router.post("/chat/stream", response_model=None)
+@limiter.limit("20/minute")
 async def chat_stream(
     request: Request,
     body: ChatRequest,
@@ -217,6 +220,7 @@ async def chat_stream(
 
 
 @router.post("/search", response_model=SearchResponse)
+@limiter.limit("60/minute")
 async def search_endpoint(
     request: Request,
     body: SearchRequest,
@@ -245,6 +249,7 @@ async def search_endpoint(
 
 
 @router.delete("/conversation")
+@limiter.limit("60/minute")
 async def clear_conversation(
     request: Request,
     current_user: Annotated[User, Depends(get_current_active_user)],

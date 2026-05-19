@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .deps import build_agent_and_chunks, build_tutor_agent
+from .rate_limit import limiter
 from .routes import router
 from .quiz_routes import router as quiz_router
 from .tutor_routes import router as tutor_router
@@ -55,9 +55,6 @@ def _get_cors_origins() -> list[str]:
     if origins == ["*"]:
         return ["*"]
     return origins
-
-
-limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager

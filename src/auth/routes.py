@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import User
 from src.db.session import get_db
+from src.api.rate_limit import limiter
 from .clerk_verify import verify_clerk_session_token
 from .schemas import (
     ClerkLoginRequest,
@@ -26,7 +27,6 @@ from .service import (
     verify_password,
 )
 from .dependencies import get_current_active_user
-from src.api.main import limiter
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])

@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.api.rate_limit import limiter
 from src.auth.dependencies import get_current_active_user
 from src.db.models import Card, ReviewAttempt, ReviewState, Topic, User
 from src.db.session import get_db
@@ -177,6 +178,7 @@ async def get_quiz_stats(
 
 
 @router.post("/sessions/start", response_model=QuizSessionStartResponse)
+@limiter.limit("20/minute")
 async def start_quiz_session(
     payload: QuizSessionStartRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -210,6 +212,7 @@ async def start_quiz_session(
 
 
 @router.post("/sessions/{session_id}/answer", response_model=QuizSessionAnswerResponse)
+@limiter.limit("120/minute")
 async def answer_quiz_session(
     session_id: str,
     payload: QuizSessionAnswerRequest,
@@ -261,6 +264,7 @@ async def answer_quiz_session(
 
 
 @router.post("/sessions/{session_id}/skip", response_model=QuizSessionSkipResponse)
+@limiter.limit("120/minute")
 async def skip_quiz_session_card(
     session_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -292,6 +296,7 @@ async def skip_quiz_session_card(
 
 
 @router.post("/sessions/{session_id}/finish", response_model=QuizSessionFinishResponse)
+@limiter.limit("60/minute")
 async def finish_quiz_session(
     session_id: str,
     current_user: Annotated[User, Depends(get_current_active_user)],
