@@ -66,7 +66,7 @@ export default function TutorPage() {
       const data = await getConversation(id)
       setMessages(data.messages || [])
       setSelectedSubject(data.subject || '')
-    } catch (err) {
+    } catch {
       setError('Failed to load conversation')
     }
   }, [])
@@ -86,7 +86,7 @@ export default function TutorPage() {
       setStreamingMsg(null)
       setError(null)
       await loadConversations()
-    } catch (err) {
+    } catch {
       setError('Failed to create conversation')
     }
   }, [selectedSubject, loadConversations])
