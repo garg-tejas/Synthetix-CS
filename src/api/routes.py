@@ -22,12 +22,12 @@ from src.orchestrator import ConversationMemory
 from .models import (
     ChatRequest,
     ChatResponse,
-    CitationOut,
     ChunkSummary,
+    CitationOut,
     HealthResponse,
+    SearchHit,
     SearchRequest,
     SearchResponse,
-    SearchHit,
     StatsResponse,
 )
 
@@ -48,7 +48,9 @@ def _get_state(request: Request) -> tuple[Any, Any, dict, int]:
 
 def _get_sessions(request: Request) -> dict[tuple[int, str], ConversationMemory]:
     now = time.time()
-    ttl_minutes = int(getattr(request.app.state, "conversation_session_ttl_minutes", 120))
+    ttl_minutes = int(
+        getattr(request.app.state, "conversation_session_ttl_minutes", 120)
+    )
     max_sessions = int(getattr(request.app.state, "conversation_session_max", 2000))
     ttl_seconds = ttl_minutes * 60
 
@@ -92,7 +94,7 @@ async def health(request: Request) -> HealthResponse:
 
 
 @router.get("/readyz")
-async def readyz(request: Request) -> dict:
+async def readyz(request: Request) -> dict | JSONResponse:
     """Readiness probe — checks chunks loaded and basic app state."""
     agent, retriever, _, chunks_loaded = _get_state(request)
     if agent is None or retriever is None or chunks_loaded == 0:
@@ -150,6 +152,7 @@ async def _stream_chat(
         await loop.run_in_executor(executor, run_stream)
     else:
         import threading
+
         thread = threading.Thread(target=run_stream)
         thread.start()
 
@@ -170,13 +173,20 @@ async def _stream_chat(
                 {
                     "id": chunk.id,
                     "header_path": chunk.header_path,
-                    "snippet": (chunk.text[:300] + "...") if len(chunk.text) > 300 else chunk.text,
+                    "snippet": (chunk.text[:300] + "...")
+                    if len(chunk.text) > 300
+                    else chunk.text,
                 }
             )
         else:
             chunks_used.append({"id": cid, "header_path": "", "snippet": ""})
-    citations_out = [{"index": c.index, "chunk_id": c.chunk_id, "snippet": c.snippet} for c in citations]
-    yield _sse_event("done", json.dumps({"citations": citations_out, "chunks_used": chunks_used}))
+    citations_out = [
+        {"index": c.index, "chunk_id": c.chunk_id, "snippet": c.snippet}
+        for c in citations
+    ]
+    yield _sse_event(
+        "done", json.dumps({"citations": citations_out, "chunks_used": chunks_used})
+    )
     memory.add_turn(body.query, full_text, sources_used)
 
 
@@ -192,7 +202,9 @@ async def chat(
     if agent is None or chunks_loaded == 0:
         return JSONResponse(
             status_code=503,
-            content={"detail": "Service unavailable: chunks not loaded or agent not initialized."},
+            content={
+                "detail": "Service unavailable: chunks not loaded or agent not initialized."
+            },
         )
     sessions = _get_sessions(request)
     conversation_id = body.conversation_id or "default"
@@ -203,7 +215,15 @@ async def chat(
         sessions[key] = memory
     _touch_session(request, key)
     history = memory.get_history()
-    resp = await asyncio.to_thread(agent.answer, body.query, history)
+    try:
+        resp = await asyncio.wait_for(
+            asyncio.to_thread(agent.answer, body.query, history),
+            timeout=45.0,
+        )
+    except asyncio.TimeoutError:
+        return JSONResponse(
+            status_code=504, content={"detail": "LLM request timed out"}
+        )
     memory.add_turn(body.query, resp.answer, resp.sources_used)
     chunks_used = []
     for cid in resp.sources_used:
@@ -213,7 +233,9 @@ async def chat(
                 ChunkSummary(
                     id=chunk.id,
                     header_path=chunk.header_path,
-                    snippet=(chunk.text[:300] + "…") if len(chunk.text) > 300 else chunk.text,
+                    snippet=(chunk.text[:300] + "…")
+                    if len(chunk.text) > 300
+                    else chunk.text,
                 )
             )
         else:
@@ -242,7 +264,9 @@ async def chat_stream(
     if agent is None or chunks_loaded == 0:
         return JSONResponse(
             status_code=503,
-            content={"detail": "Service unavailable: chunks not loaded or agent not initialized."},
+            content={
+                "detail": "Service unavailable: chunks not loaded or agent not initialized."
+            },
         )
     sessions = _get_sessions(request)
     return StreamingResponse(
@@ -264,7 +288,9 @@ async def search_endpoint(
     if retriever is None or chunks_loaded == 0:
         return JSONResponse(
             status_code=503,
-            content={"detail": "Service unavailable: chunks not loaded or retriever not initialized."},
+            content={
+                "detail": "Service unavailable: chunks not loaded or retriever not initialized."
+            },
         )
     results = await asyncio.to_thread(retriever.search, body.query, body.top_k)
     hits = []

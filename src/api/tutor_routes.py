@@ -41,6 +41,7 @@ def _sse_event(event: str, data: str) -> str:
 # Conversation CRUD
 # ------------------------------------------------------------------
 
+
 @router.get("/conversations", response_model=ConversationListResponse)
 async def list_conversations(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -169,6 +170,7 @@ async def delete_conversation(
 # Chat helpers
 # ------------------------------------------------------------------
 
+
 async def _load_conversation_history(
     db: AsyncSession, user_id: int, conversation_id: int | None
 ) -> tuple[Conversation | None, list[dict]]:
@@ -216,6 +218,7 @@ async def _save_message(
 # Non-streaming chat
 # ------------------------------------------------------------------
 
+
 @router.post("/chat", response_model=TutorChatResponse)
 async def tutor_chat(
     body: TutorChatRequest,
@@ -241,7 +244,15 @@ async def tutor_chat(
     # Scope retrieval to subject if set on conversation or request
     subject = body.subject or (conv.subject if conv else None)
 
-    resp = await asyncio.to_thread(tutor_agent.answer, body.query, history, subject=subject)
+    try:
+        resp = await asyncio.wait_for(
+            asyncio.to_thread(tutor_agent.answer, body.query, history, subject=subject),
+            timeout=45.0,
+        )
+    except asyncio.TimeoutError:
+        return JSONResponse(
+            status_code=504, content={"detail": "Tutor LLM request timed out"}
+        )
 
     # Create conversation if none exists
     if conv is None:
@@ -271,7 +282,9 @@ async def tutor_chat(
                 ChunkSummary(
                     id=chunk.id,
                     header_path=chunk.header_path,
-                    snippet=(chunk.text[:300] + "...") if len(chunk.text) > 300 else chunk.text,
+                    snippet=(chunk.text[:300] + "...")
+                    if len(chunk.text) > 300
+                    else chunk.text,
                 )
             )
         else:
@@ -298,6 +311,7 @@ async def tutor_chat(
 # Streaming chat (SSE)
 # ------------------------------------------------------------------
 
+
 async def _stream_tutor_chat(
     request: Request,
     body: TutorChatRequest,
@@ -318,10 +332,21 @@ async def _stream_tutor_chat(
     subject = body.subject or (conv.subject if conv else None)
 
     # Retrieve results first (blocking)
-    results, fallback = await asyncio.to_thread(tutor_agent.retrieve, body.query, history, subject=subject)
+    results, fallback = await asyncio.to_thread(
+        tutor_agent.retrieve, body.query, history, subject=subject
+    )
     if fallback is not None:
         yield _sse_event("token", json.dumps({"token": fallback.answer}))
-        yield _sse_event("done", json.dumps({"citations": [], "chunks_used": [], "conversation_id": conv.id if conv else None}))
+        yield _sse_event(
+            "done",
+            json.dumps(
+                {
+                    "citations": [],
+                    "chunks_used": [],
+                    "conversation_id": conv.id if conv else None,
+                }
+            ),
+        )
         return
 
     # Create conversation if needed
@@ -355,6 +380,7 @@ async def _stream_tutor_chat(
         await loop.run_in_executor(executor, run_stream)
     else:
         import threading
+
         thread = threading.Thread(target=run_stream)
         thread.start()
 
@@ -368,6 +394,7 @@ async def _stream_tutor_chat(
 
     # Build citations and chunks
     from src.generation import extract_citations
+
     citations = extract_citations(full_text, results)
     sources_used = [r.chunk.id for r in results]
     chunks_used = []
@@ -378,13 +405,18 @@ async def _stream_tutor_chat(
                 {
                     "id": chunk.id,
                     "header_path": chunk.header_path,
-                    "snippet": (chunk.text[:300] + "...") if len(chunk.text) > 300 else chunk.text,
+                    "snippet": (chunk.text[:300] + "...")
+                    if len(chunk.text) > 300
+                    else chunk.text,
                 }
             )
         else:
             chunks_used.append({"id": cid, "header_path": "", "snippet": ""})
 
-    citations_out = [{"index": c.index, "chunk_id": c.chunk_id, "snippet": c.snippet} for c in citations]
+    citations_out = [
+        {"index": c.index, "chunk_id": c.chunk_id, "snippet": c.snippet}
+        for c in citations
+    ]
 
     # Save assistant response
     await _save_message(
@@ -398,11 +430,13 @@ async def _stream_tutor_chat(
 
     yield _sse_event(
         "done",
-        json.dumps({
-            "citations": citations_out,
-            "chunks_used": chunks_used,
-            "conversation_id": conv.id,
-        }),
+        json.dumps(
+            {
+                "citations": citations_out,
+                "chunks_used": chunks_used,
+                "conversation_id": conv.id,
+            }
+        ),
     )
 
 

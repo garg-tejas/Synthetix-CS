@@ -13,9 +13,13 @@ from pydantic import BaseModel, Field
 class TutorChatRequest(BaseModel):
     """Request body for POST /api/tutor/chat."""
 
-    query: str = Field(..., min_length=1, description="User question")
-    conversation_id: Optional[int] = Field(None, description="Conversation ID for history")
-    subject: Optional[str] = Field(None, description="Optional subject scope (os, cn, dbms)")
+    query: str = Field(..., min_length=1, max_length=2000, description="User question")
+    conversation_id: Optional[int] = Field(
+        None, description="Conversation ID for history"
+    )
+    subject: Optional[str] = Field(
+        None, description="Optional subject scope (os, cn, dbms)"
+    )
 
 
 class CitationOut(BaseModel):

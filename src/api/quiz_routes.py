@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from src.api.rate_limit import limiter
 from src.auth.dependencies import get_current_active_user
-from src.db.models import Card, ReviewAttempt, ReviewState, Topic, User
+from src.db.models import Card, ReviewAttempt, ReviewState, Topic, User, UserTopicSWOT
 from src.db.session import get_db
 from src.skills.path_planner import PathNode
 from src.skills.quiz_service import QuizService
@@ -27,9 +27,8 @@ from src.skills.schemas import (
     SessionProgress,
     TopicStats,
 )
-from src.skills.session_service import QuizSessionService, QuizSessionState
+from src.skills.session_service import QuizSessionState
 from src.skills.swot import refresh_user_swot
-
 
 router = APIRouter(prefix="/api/quiz", tags=["quiz"])
 
@@ -79,9 +78,7 @@ def _quiz_sessions_store(request: Request) -> dict[str, QuizSessionState]:
 
     cutoff = now - dt.timedelta(minutes=ttl_minutes)
     stale_ids = [
-        session_id
-        for session_id, state in store.items()
-        if state.created_at < cutoff
+        session_id for session_id, state in store.items() if state.created_at < cutoff
     ]
     for session_id in stale_ids:
         store.pop(session_id, None)
@@ -161,6 +158,9 @@ async def list_topics(
     ]
 
 
+_SWOT_TTL_SECONDS = 300  # re-compute SWOT at most once per 5 minutes
+
+
 @router.get("/stats", response_model=QuizStatsResponse)
 async def get_quiz_stats(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -172,11 +172,26 @@ async def get_quiz_stats(
     )
     cards = card_result.scalars().unique().all()
 
-    await _refresh_swot_snapshot(
-        db=db,
-        user_id=current_user.id,
-        cards=cards,
+    # Only recompute SWOT when the snapshot is stale (older than TTL).
+    # This avoids a full O(n-cards) upsert on every dashboard page load.
+    now = dt.datetime.now(dt.timezone.utc)
+    swot_result = await db.execute(
+        select(UserTopicSWOT.updated_at)
+        .where(UserTopicSWOT.user_id == current_user.id)
+        .order_by(UserTopicSWOT.updated_at.desc())
+        .limit(1)
     )
+    most_recent_swot = swot_result.scalar_one_or_none()
+    swot_is_fresh = (
+        most_recent_swot is not None
+        and (now - most_recent_swot).total_seconds() < _SWOT_TTL_SECONDS
+    )
+    if not swot_is_fresh:
+        await _refresh_swot_snapshot(
+            db=db,
+            user_id=current_user.id,
+            cards=cards,
+        )
 
     state_result = await db.execute(
         select(ReviewState).where(ReviewState.user_id == current_user.id)
