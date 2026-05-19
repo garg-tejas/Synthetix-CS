@@ -7,8 +7,7 @@ from __future__ import annotations
 import asyncio
 import json
 import queue
-import threading
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -376,13 +375,23 @@ async def _stream_tutor_chat(
 
     loop = asyncio.get_running_loop()
     executor = getattr(request.app.state, "llm_executor", None)
-    if executor is not None:
-        await loop.run_in_executor(executor, run_stream)
-    else:
-        import threading
+    try:
+        if executor is not None:
+            await asyncio.wait_for(
+                loop.run_in_executor(executor, run_stream),
+                timeout=45.0,
+            )
+        else:
+            import threading
 
-        thread = threading.Thread(target=run_stream)
-        thread.start()
+            thread = threading.Thread(target=run_stream)
+            thread.start()
+            thread.join(timeout=45)
+            if thread.is_alive():
+                raise asyncio.TimeoutError
+    except asyncio.TimeoutError:
+        yield _sse_event("error", json.dumps({"detail": "LLM stream timed out"}))
+        return
 
     full_text = ""
     while True:
