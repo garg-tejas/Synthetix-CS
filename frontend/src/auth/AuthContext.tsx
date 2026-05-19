@@ -12,7 +12,6 @@ export interface AuthContextValue {
   status: AuthStatus
   user: UserOut | null
   accessToken: string | null
-  refreshToken: string | null
   setTokenPair: (tokens: TokenResponse) => void
   clearSession: () => void
   refreshUser: () => Promise<void>
@@ -21,7 +20,6 @@ export interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 const ACCESS_KEY = 'csrag.access_token'
-const REFRESH_KEY = 'csrag.refresh_token'
 
 function readStoredToken(key: string): string | null {
   try {
@@ -44,9 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(() =>
     readStoredToken(ACCESS_KEY)
   )
-  const [refreshToken, setRefreshToken] = useState<string | null>(() =>
-    readStoredToken(REFRESH_KEY)
-  )
   const [user, setUser] = useState<UserOut | null>(null)
   const [status, setStatus] = useState<AuthStatus>('unknown')
 
@@ -61,20 +56,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ignore — local cleanup is the safety net
     }
     setAccessToken(null)
-    setRefreshToken(null)
     setUser(null)
     setStatus('unauthenticated')
     tokenManager.clear()
     writeStoredToken(ACCESS_KEY, null)
-    writeStoredToken(REFRESH_KEY, null)
   }
 
   const setTokenPair = (tokens: TokenResponse) => {
     setAccessToken(tokens.access_token)
-    setRefreshToken(tokens.refresh_token)
     tokenManager.setTokens(tokens.access_token, tokens.refresh_token)
     writeStoredToken(ACCESS_KEY, tokens.access_token)
-    writeStoredToken(REFRESH_KEY, tokens.refresh_token)
+    // NOTE: refresh token is kept ONLY in memory (tokenManager) and never
+    // persisted to sessionStorage. This limits XSS impact to the short-lived
+    // access token only. On page reload the user re-authenticates via Clerk.
   }
 
   const refreshUser = async () => {
@@ -90,18 +84,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // On mount: ensure tokenManager has whatever we stored.
   useEffect(() => {
-    if (accessToken && refreshToken) {
-      tokenManager.setTokens(accessToken, refreshToken)
+    if (accessToken) {
+      tokenManager.setTokens(accessToken, '')
     } else {
       tokenManager.clear()
     }
-  }, [accessToken, refreshToken])
+  }, [accessToken])
 
   // On auth failure from API client: clear tokens.
   useEffect(() => {
-      setAuthFailureHandler(() => {
-        void clearSession()
-      })
+    setAuthFailureHandler(() => {
+      void clearSession()
+    })
   }, [])
 
   // Validate existing tokens by fetching /me whenever accessToken changes.
@@ -118,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         return
       }
-      tokenManager.setTokens(accessToken, refreshToken || '')
+      tokenManager.setTokens(accessToken, '')
       try {
         const me = await getMe()
         if (cancelled) return
@@ -187,12 +181,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       status,
       user,
       accessToken,
-      refreshToken,
       setTokenPair,
       clearSession,
       refreshUser,
     }),
-    [status, user, accessToken, refreshToken]
+    [status, user, accessToken]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -204,4 +197,13 @@ export function useAuth(): AuthContextValue {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return ctx
+}
+
+/**
+ * Returns true only when the auth status has resolved (not 'unknown').
+ * Use this to gate data-fetching hooks so they don't fire with stale tokens.
+ */
+export function useAuthReady(): boolean {
+  const { status } = useAuth()
+  return status !== 'unknown'
 }
