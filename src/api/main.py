@@ -43,7 +43,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "default-src 'self'; "
             "style-src 'self' 'unsafe-inline' https://api.fontshare.com https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com https://api.fontshare.com; "
-            "script-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://clerk.accounts.dev; "
+            "connect-src 'self' https://*.clerk.accounts.dev https://clerk.accounts.dev; "
+            "img-src 'self' data: https:; "
             "frame-ancestors 'none';"
         )
         return response
