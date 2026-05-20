@@ -34,14 +34,22 @@ function App() {
           </Route>
           <Route element={<AppShell mode="auth" width="content" />}>
             <Route path="/login" element={<LoginPage />} />
-            <Route
-              path="/login/sso-callback"
-              element={<SignIn routing="path" path="/login" />}
-            />
             <Route path="/signup" element={<SignupPage />} />
             <Route
               path="/signup/sso-callback"
-              element={<SignUp routing="path" path="/signup" />}
+              element={
+                <SignUp
+                  routing="path"
+                  path="/signup"
+                  fallbackRedirectUrl="/dashboard"
+                />
+              }
+            />
+            <Route
+              path="/login/sso-callback"
+              element={
+                <SignIn routing="path" path="/login" fallbackRedirectUrl="/dashboard" />
+              }
             />
           </Route>
           <Route element={<AppShell mode="plain" width="narrow" />}>
